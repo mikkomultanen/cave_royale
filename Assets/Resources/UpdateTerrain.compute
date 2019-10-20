@@ -1,0 +1,18 @@
+﻿#pragma kernel DestroyTerrain
+
+RWTexture2D<float4> terrain;
+StructuredBuffer<float4> explosions;
+uint _Count;
+
+[numthreads(8,8,1)]
+void DestroyTerrain (uint3 id : SV_DispatchThreadID)
+{
+    for (uint i = 0; i < _Count; i++) {
+        float4 e = explosions[i];
+        float2 v = e.xy - id.xy;
+        float r2 = dot(v, v);
+        if (r2 < e.z) {
+            terrain[id.xy] = float4(0, 0, 0, 0);
+        }
+    }
+}
