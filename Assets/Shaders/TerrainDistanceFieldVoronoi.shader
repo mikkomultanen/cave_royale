@@ -111,12 +111,12 @@ Shader "CaveRoyale/Voronoi" {
                 float2 bestCoord = data.xy;
                 float2 v = (i.uv - bestCoord) * _DistanceScale.zw;
                 float d = length(v);
-                float2 normal = lerp(float2(0, 0), v / max(0.0001, d), all(bestCoord));
+                float2 normal = lerp(float2(0, 0), v / max(0.2, d), all(bestCoord));
 
                 float2 bestInnerCoord = data.zw;
                 float2 innerV = (bestInnerCoord - i.uv) * _DistanceScale.zw;
                 float2 innerD = length(innerV);
-                float2 innerNormal = lerp(float2(0, 0), innerV / max(0.0001, innerD), all(bestInnerCoord));;
+                float2 innerNormal = lerp(float2(0, 0), innerV / max(0.2, innerD), all(bestInnerCoord));;
 
                 float distance = 0.5 * lerp(1, saturate(d), all(bestCoord)) +
                     0.5 * lerp(0, 1 - saturate(innerD), all(bestInnerCoord));

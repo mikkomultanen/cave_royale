@@ -11,6 +11,7 @@ public class TerrainSystem : MonoBehaviour {
 	public int height = 1080;
 	public RenderTexture terrain;
 	public RenderTexture terrainDistanceField;
+	public float terrainDistanceFieldMultiplier { get; private set; }
 	public Vector4 terrainDistanceFieldScale { get; private set; }
 	public Material terrainMaterial;
 	private Material material;
@@ -75,14 +76,18 @@ public class TerrainSystem : MonoBehaviour {
     }
 	
 	private void OnEnable() {
-		terrainDistanceField = new RenderTexture(width / 2, height / 2, 0, RenderTextureFormat.ARGB2101010, RenderTextureReadWrite.Linear);
-		terrainDistanceFieldScale = new Vector4(1f / width, 1f / height, width, height);
-		terrainDistanceField.antiAliasing = 1;
-		terrainDistanceField.isPowerOfTwo = true;
-		terrainDistanceField.filterMode = FilterMode.Trilinear;
+		terrainDistanceField = new RenderTexture(width / 4, height / 4, 0, RenderTextureFormat.ARGB2101010, RenderTextureReadWrite.Linear);
+		terrainDistanceFieldMultiplier = 8;
+		float scaleWidth = width / terrainDistanceFieldMultiplier;
+		float scaleHeight = height / terrainDistanceFieldMultiplier;
+		terrainDistanceFieldScale = new Vector4(1f / scaleWidth, 1f / scaleHeight, scaleWidth, scaleHeight);
+		terrainDistanceField.antiAliasing = 0;
+		terrainDistanceField.filterMode = FilterMode.Bilinear;
 		terrainDistanceField.hideFlags = HideFlags.DontSave;
+		Shader.SetGlobalFloat("_TerrainDistanceFieldMultiplier", terrainDistanceFieldMultiplier);
+		Shader.SetGlobalVector("_TerrainDistanceFieldScale", terrainDistanceFieldScale);
+		Shader.SetGlobalTexture("_TerrainDistanceField", terrainDistanceField);
 		material = new Material(Shader.Find("CaveRoyale/DistanceFieldDebug"));
-		material.SetTexture("_MainTex", terrainDistanceField);
 		MeshRenderer renderer = GetComponent<MeshRenderer>();
 		renderer.material = material;
 		voronoiMaterial = new Material(Shader.Find("CaveRoyale/Voronoi"));
