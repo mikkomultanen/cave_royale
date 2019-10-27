@@ -96,7 +96,7 @@ namespace CaveRoyale {
                 emitBuffer.SetData(emitList);
                 computeShader.SetInt("CounterOffset", 0);
                 computeShader.SetInt("Width", emitList.Count);
-                computeShader.SetFloat("Lifetime", 10);
+                computeShader.SetFloat("Lifetime", 1000);
                 computeShader.SetBuffer(emitKernel, "Counter", counter);
                 computeShader.SetBuffer(emitKernel, "Uploads", emitBuffer);
                 computeShader.SetBuffer(emitKernel, "Pool", deadBuffer);
