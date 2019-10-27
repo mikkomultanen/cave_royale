@@ -57,8 +57,11 @@ namespace CaveRoyale {
 
             computeShader = (ComputeShader)Resources.Load("DebrisSystem");
             computeShader.SetFloat("DT", timestep);
+            computeShader.SetVector("Gravity", new Vector2(0, -98.1f));
+            computeShader.SetFloat("Damping", 0.1f);
 
             int initKernel = computeShader.FindKernel("Init");
+            computeShader.SetInt("Width", positionsBuffer.count);
             computeShader.SetBuffer(initKernel, "PositionsWRITE", positionsBuffer);
             computeShader.SetBuffer(initKernel, "VelocitiesWRITE", velocitiesBuffer);
             computeShader.SetBuffer(initKernel, "Lifetimes", lifetimesBuffer);
@@ -73,6 +76,7 @@ namespace CaveRoyale {
             nextFrameTime += Time.deltaTime;
             while (nextFrameTime > timestep) {
                 nextFrameTime -= timestep;
+                DispatchPredictPositions();
                 DispatchUpdate();
             }
 
@@ -100,13 +104,29 @@ namespace CaveRoyale {
             }
         }
 
+        private void DispatchPredictPositions()
+        {
+            int predictPositionsKernel = computeShader.FindKernel("PredictPositions");
+            computeShader.SetInt("Width", positionsBuffer.count);
+            computeShader.SetBuffer(predictPositionsKernel, "PositionsREAD", positionsBuffer);
+            computeShader.SetBuffer(predictPositionsKernel, "VelocitiesREAD", velocitiesBuffer);
+            computeShader.SetBuffer(predictPositionsKernel, "Lifetimes", lifetimesBuffer);
+            computeShader.SetBuffer(predictPositionsKernel, "PredictedWRITE", predictedBuffers[WRITE]);
+            computeShader.Dispatch(predictPositionsKernel, Groups(positionsBuffer.count), 1, 1);
+            Swap(predictedBuffers);
+        }
+
         private void DispatchUpdate()
         {
             int updateKernel = computeShader.FindKernel("Update");
     		aliveBuffer.SetCounterValue(0);
+            computeShader.SetInt("Width", positionsBuffer.count);
             computeShader.SetBuffer(updateKernel, "Lifetimes", lifetimesBuffer);
             computeShader.SetBuffer(updateKernel, "Dead", deadBuffer);
             computeShader.SetBuffer(updateKernel, "Alive", aliveBuffer);
+            computeShader.SetBuffer(updateKernel, "PredictedREAD", predictedBuffers[READ]);
+            computeShader.SetBuffer(updateKernel, "PositionsWRITE", positionsBuffer);
+            computeShader.SetBuffer(updateKernel, "VelocitiesWRITE", velocitiesBuffer);
             computeShader.Dispatch(updateKernel, Groups(lifetimesBuffer.count), 1, 1);
         }
 
@@ -144,6 +164,13 @@ namespace CaveRoyale {
             ComputeUtilities.Release(ref aliveBuffer);
             ComputeUtilities.Release(ref counter);
             mesh = null;
+        }
+
+        private static void Swap(ComputeBuffer[] buffers)
+        {
+            ComputeBuffer tmp = buffers[0];
+            buffers[0] = buffers[1];
+            buffers[1] = tmp;
         }
     }
 }

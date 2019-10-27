@@ -14,9 +14,7 @@ public class TerrainTest : MonoBehaviour {
 			if (viewPos.x > 0 && viewPos.x < 1 && viewPos.y > 0 && viewPos.y < 1) {
 				Vector3 wordPos = _camera.ScreenToWorldPoint(mousePos);
 				terrainSystem.EmitExplosion(wordPos, 3);
-				if (Input.GetMouseButtonDown(0)) {
-					terrainSystem.EmitDebris(wordPos, Vector2.zero);
-				}
+				terrainSystem.EmitDebris(wordPos, Vector2.zero);
 			}
 		}
 	}

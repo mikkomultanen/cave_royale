@@ -17,6 +17,8 @@ uint Width;
 uint CounterOffset;
 float Lifetime;
 float DT;
+float2 Gravity;
+float Damping;
 
 Texture2D<float3> _TerrainDistanceField;
 SamplerState sampler_TerrainDistanceField;
@@ -25,43 +27,62 @@ float _TerrainDistanceFieldMultiplier;
 
 #pragma kernel Init
 [numthreads(THREADS,1,1)]
-void Init(uint3 id : SV_DispatchThreadID)
+void Init(uint id : SV_DispatchThreadID)
 {
-	const uint idx = id.x;
-	PositionsWRITE[idx] = float2(0, 0);
-    VelocitiesWRITE[idx] = float2(0, 0);
-    Lifetimes[idx] = float2(1, 0);
-	Dead.Append(idx);
+    if (id >= Width) return;
+
+	PositionsWRITE[id] = float2(0, 0);
+    VelocitiesWRITE[id] = float2(0, 0);
+    Lifetimes[id] = float2(1, 0);
+	Dead.Append(id);
 }
 
 #pragma kernel Emit
 [numthreads(THREADS,1,1)]
-void Emit (uint3 id : SV_DispatchThreadID)
+void Emit (uint id : SV_DispatchThreadID)
 {
-	uint idx = id.x;
-	if (idx < Width && idx < Counter[CounterOffset]) {
-		float4 upload = Uploads[idx];
-		idx = Pool.Consume();
+	if (id < Width && id < Counter[CounterOffset]) {
+		float4 upload = Uploads[id];
+		uint idx = Pool.Consume();
         PositionsWRITE[idx] = upload.xy;
         VelocitiesWRITE[idx] = upload.zw;
         Lifetimes[idx] = float2(0, Lifetime);
 	}
 }
 
+#pragma kernel PredictPositions
+[numthreads(THREADS,1,1)]
+void PredictPositions (uint id : SV_DispatchThreadID)
+{
+    if (id >= Width) return;
+
+    float2 lifetime = Lifetimes[id];
+    if (lifetime.x > lifetime.y) return;
+
+    float2 velocity = VelocitiesREAD[id];
+    velocity -= velocity * Damping * DT;
+    velocity += Gravity * DT;
+    PredictedWRITE[id] = PositionsREAD[id] + velocity * DT;
+}
+
+
 #pragma kernel Update
 [numthreads(THREADS,1,1)]
-void Update(uint3 id : SV_DispatchThreadID)
+void Update(uint id : SV_DispatchThreadID)
 {
-    const uint idx = id.x;
-    float2 lifetime = Lifetimes[idx];
+    if (id >= Width) return;
+
+    float2 lifetime = Lifetimes[id];
     if (lifetime.x > lifetime.y) return;
+
     lifetime.x += DT;
-    Lifetimes[idx] = lifetime;
+    Lifetimes[id] = lifetime;
     if (lifetime.x > lifetime.y) {
-        Dead.Append(idx);
+        Dead.Append(id);
     } else {
-        Alive.Append(idx);
-        //VelocitiesWRITE[idx] = (PredictedREAD[idx] - PositionsWRITE[idx]) / DT;
-        //PositionsWRITE[idx] = PredictedREAD[idx]; 
+        Alive.Append(id);
+        float2 predictedPosition = PredictedREAD[id];
+        VelocitiesWRITE[id] = (predictedPosition - PositionsWRITE[id]) / DT;
+        PositionsWRITE[id] = predictedPosition; 
     }
 }

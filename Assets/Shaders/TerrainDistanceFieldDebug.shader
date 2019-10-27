@@ -29,7 +29,7 @@ Shader "CaveRoyale/DistanceFieldDebug" {
                 float4 value = tex2D (_TerrainDistanceField, i.uv);
                 clip(0.5 - value.x);
                 float d = (1 - 2 * value.x) * _TerrainDistanceFieldMultiplier;
-                if (d < 4) {
+                if (d < 1) {
                     return float4(value.yz, 0, 1);
                 }
                 return float4(0.5, 0.2, 0, 1);
