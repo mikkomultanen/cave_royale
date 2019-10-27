@@ -91,7 +91,6 @@ namespace CaveRoyale {
         private void DispatchEmit()
         {
             if (emitList.Count > 0) {
-                Debug.Log("Emit debris: " + emitList.Count);
                 int emitKernel = computeShader.FindKernel("Emit");
                 ComputeBuffer.CopyCount(deadBuffer, counter, 0);
                 emitBuffer.SetData(emitList);
