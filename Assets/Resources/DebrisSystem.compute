@@ -1,0 +1,67 @@
+#define THREADS 128
+
+StructuredBuffer<float2> PositionsREAD;
+RWStructuredBuffer<float2> PositionsWRITE;
+StructuredBuffer<float2> VelocitiesREAD;
+RWStructuredBuffer<float2> VelocitiesWRITE;
+RWStructuredBuffer<float2> Lifetimes;
+StructuredBuffer<float2> PredictedREAD;
+RWStructuredBuffer<float2> PredictedWRITE;
+AppendStructuredBuffer<uint> Dead;
+ConsumeStructuredBuffer<uint> Pool;
+AppendStructuredBuffer<uint> Alive;
+StructuredBuffer<uint> Counter;
+StructuredBuffer<float4> Uploads;
+
+uint Width;
+uint CounterOffset;
+float Lifetime;
+float DT;
+
+Texture2D<float3> _TerrainDistanceField;
+SamplerState sampler_TerrainDistanceField;
+float4 _TerrainDistanceFieldScale; // x = 1 / width, y = 1 / height, z = width, w = height
+float _TerrainDistanceFieldMultiplier;
+
+#pragma kernel Init
+[numthreads(THREADS,1,1)]
+void Init(uint3 id : SV_DispatchThreadID)
+{
+	const uint idx = id.x;
+	PositionsWRITE[idx] = float2(0, 0);
+    VelocitiesWRITE[idx] = float2(0, 0);
+    Lifetimes[idx] = float2(1, 0);
+	Dead.Append(idx);
+}
+
+#pragma kernel Emit
+[numthreads(THREADS,1,1)]
+void Emit (uint3 id : SV_DispatchThreadID)
+{
+	uint idx = id.x;
+	if (idx < Width && idx < Counter[CounterOffset]) {
+		float4 upload = Uploads[idx];
+		idx = Pool.Consume();
+        PositionsWRITE[idx] = upload.xy;
+        VelocitiesWRITE[idx] = upload.zw;
+        Lifetimes[idx] = float2(0, Lifetime);
+	}
+}
+
+#pragma kernel Update
+[numthreads(THREADS,1,1)]
+void Update(uint3 id : SV_DispatchThreadID)
+{
+    const uint idx = id.x;
+    float2 lifetime = Lifetimes[idx];
+    if (lifetime.x > lifetime.y) return;
+    lifetime.x += DT;
+    Lifetimes[idx] = lifetime;
+    if (lifetime.x > lifetime.y) {
+        Dead.Append(idx);
+    } else {
+        Alive.Append(idx);
+        //VelocitiesWRITE[idx] = (PredictedREAD[idx] - PositionsWRITE[idx]) / DT;
+        //PositionsWRITE[idx] = PredictedREAD[idx]; 
+    }
+}

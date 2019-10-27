@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using UnityEngine;
+using CaveRoyale;
 
 [ExecuteInEditMode()]
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
@@ -14,6 +15,7 @@ public class TerrainSystem : MonoBehaviour {
 	public float terrainDistanceFieldMultiplier { get; private set; }
 	public Vector4 terrainDistanceFieldScale { get; private set; }
 	public Material terrainMaterial;
+	public Material debrisMaterial;
 	private Material material;
 	private Material voronoiMaterial;
 	private ComputeShader computeShader;
@@ -22,6 +24,7 @@ public class TerrainSystem : MonoBehaviour {
 	private uint destroyTerrainKernelY;
 	private ComputeBuffer explosionsBuffer;
 	private List<Vector4> explosionsList = new List<Vector4>();
+	private DebrisSystem debrisSystem;
 
     private void Awake()
     {
@@ -81,7 +84,7 @@ public class TerrainSystem : MonoBehaviour {
 		float scaleWidth = width / terrainDistanceFieldMultiplier;
 		float scaleHeight = height / terrainDistanceFieldMultiplier;
 		terrainDistanceFieldScale = new Vector4(1f / scaleWidth, 1f / scaleHeight, scaleWidth, scaleHeight);
-		terrainDistanceField.antiAliasing = 0;
+		terrainDistanceField.antiAliasing = 1;
 		terrainDistanceField.filterMode = FilterMode.Bilinear;
 		terrainDistanceField.hideFlags = HideFlags.DontSave;
 		Shader.SetGlobalFloat("_TerrainDistanceFieldMultiplier", terrainDistanceFieldMultiplier);
@@ -102,6 +105,10 @@ public class TerrainSystem : MonoBehaviour {
 	private void Start() {
 		if(terrain) {
 			DestroyImmediate(terrain);
+		}
+		if (debrisSystem != null) {
+			debrisSystem.Dispose();
+			debrisSystem = null;
 		}
 	}
 
@@ -124,6 +131,11 @@ public class TerrainSystem : MonoBehaviour {
 			computeShader.Dispatch(destroyTerrainKernel, x, y, 1);
 			explosionsList.Clear();
 		}
+
+		if (debrisSystem == null) {
+			debrisSystem = new DebrisSystem(65536, 0.01f, debrisMaterial, new Bounds(Vector3.zero, new Vector3(width, height, 100)));
+		}
+		debrisSystem.Update();
 	} 
 
 	private void LateUpdate() {
@@ -163,6 +175,10 @@ public class TerrainSystem : MonoBehaviour {
 		DestroyImmediate(material);
 		DestroyImmediate(voronoiMaterial);
 		explosionsBuffer.Release();
+		if (debrisSystem != null) {
+			debrisSystem.Dispose();
+			debrisSystem = null;
+		}
 	}
 
 	public void EmitExplosion(Vector2 position, float radius) {
@@ -172,6 +188,13 @@ public class TerrainSystem : MonoBehaviour {
 			e.y += height / 2;
 			e.z = radius * radius;
 			explosionsList.Add(e);
+		}
+	}
+
+	public void EmitDebris(Vector2 position, Vector2 velocity)
+	{
+		if (debrisSystem != null) {
+			debrisSystem.Emit(position, Vector2.zero);
 		}
 	}
 }
