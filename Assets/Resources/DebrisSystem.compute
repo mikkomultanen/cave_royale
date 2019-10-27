@@ -65,6 +65,30 @@ void PredictPositions (uint id : SV_DispatchThreadID)
     PredictedWRITE[id] = PositionsREAD[id] + velocity * DT;
 }
 
+float2 normalized(float2 v)
+{
+    return v / max(length(v), 0.0001);
+}
+
+#pragma kernel SolveConstraints
+[numthreads(THREADS,1,1)]
+void SolveConstraints(uint id : SV_DispatchThreadID)
+{
+    if (id >= Width) return;
+
+    const float2 lifetime = Lifetimes[id];
+    if (lifetime.x > lifetime.y) return;
+
+    float2 predicted = PredictedREAD[id];
+    float2 uv = predicted * _TerrainDistanceFieldScale.xy + 0.5;
+    float3 td = 2 * _TerrainDistanceField.SampleLevel(sampler_TerrainDistanceField, uv, 0) - 1;
+    float distance = td.x * _TerrainDistanceFieldMultiplier;
+    if (distance < 0.5) {
+        const float2 n = normalized(td.yz);
+        predicted += (0.5 - distance) * n;
+    }
+    PredictedWRITE[id] = predicted;
+}
 
 #pragma kernel Update
 [numthreads(THREADS,1,1)]

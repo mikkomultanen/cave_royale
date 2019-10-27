@@ -14,6 +14,7 @@ namespace CaveRoyale {
         private float timestep;
         private Material material;
         private Bounds bounds;
+        private TerrainSystem terrainSystem;
         private float nextFrameTime = 0;
         private ComputeBuffer positionsBuffer;
         private ComputeBuffer velocitiesBuffer;
@@ -28,11 +29,12 @@ namespace CaveRoyale {
         private ComputeShader computeShader;
         private List<Vector4> emitList = new List<Vector4>();
 
-        public DebrisSystem(int maxNumParticles, float timestep, Material material, Bounds bounds)
+        public DebrisSystem(int maxNumParticles, float timestep, Material material, Bounds bounds, TerrainSystem terrainSystem)
         {
             this.timestep = timestep;
             this.material = material;
             this.bounds = bounds;
+            this.terrainSystem = terrainSystem;
 
             positionsBuffer = new ComputeBuffer(maxNumParticles, Marshal.SizeOf(typeof(Vector4)));
             velocitiesBuffer = new ComputeBuffer(maxNumParticles, Marshal.SizeOf(typeof(Vector4)));
@@ -59,6 +61,8 @@ namespace CaveRoyale {
             computeShader.SetFloat("DT", timestep);
             computeShader.SetVector("Gravity", new Vector2(0, -98.1f));
             computeShader.SetFloat("Damping", 0.1f);
+    		computeShader.SetVector("_TerrainDistanceFieldScale", terrainSystem.terrainDistanceFieldScale);
+            computeShader.SetFloat("_TerrainDistanceFieldMultiplier", terrainSystem.terrainDistanceFieldMultiplier);
 
             int initKernel = computeShader.FindKernel("Init");
             computeShader.SetInt("Width", positionsBuffer.count);
@@ -77,6 +81,7 @@ namespace CaveRoyale {
             while (nextFrameTime > timestep) {
                 nextFrameTime -= timestep;
                 DispatchPredictPositions();
+                DispatchSolveConstraints();
                 DispatchUpdate();
             }
 
@@ -113,6 +118,18 @@ namespace CaveRoyale {
             computeShader.SetBuffer(predictPositionsKernel, "Lifetimes", lifetimesBuffer);
             computeShader.SetBuffer(predictPositionsKernel, "PredictedWRITE", predictedBuffers[WRITE]);
             computeShader.Dispatch(predictPositionsKernel, Groups(positionsBuffer.count), 1, 1);
+            Swap(predictedBuffers);
+        }
+
+        private void DispatchSolveConstraints()
+        {
+            int solveConstraintsKernel = computeShader.FindKernel("SolveConstraints");
+            computeShader.SetTexture(solveConstraintsKernel, "_TerrainDistanceField", terrainSystem.terrainDistanceField);
+            computeShader.SetBuffer(solveConstraintsKernel, "PositionsREAD", positionsBuffer);
+            computeShader.SetBuffer(solveConstraintsKernel, "PredictedREAD", predictedBuffers[READ]);
+            computeShader.SetBuffer(solveConstraintsKernel, "Lifetimes", lifetimesBuffer);
+            computeShader.SetBuffer(solveConstraintsKernel, "PredictedWRITE", predictedBuffers[WRITE]);
+            computeShader.Dispatch(solveConstraintsKernel, Groups(positionsBuffer.count), 1, 1);
             Swap(predictedBuffers);
         }
 

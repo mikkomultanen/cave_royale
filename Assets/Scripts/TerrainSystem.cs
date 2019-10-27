@@ -81,9 +81,7 @@ public class TerrainSystem : MonoBehaviour {
 	private void OnEnable() {
 		terrainDistanceField = new RenderTexture(width / 4, height / 4, 0, RenderTextureFormat.ARGB2101010, RenderTextureReadWrite.Linear);
 		terrainDistanceFieldMultiplier = 8;
-		float scaleWidth = width / terrainDistanceFieldMultiplier;
-		float scaleHeight = height / terrainDistanceFieldMultiplier;
-		terrainDistanceFieldScale = new Vector4(1f / scaleWidth, 1f / scaleHeight, scaleWidth, scaleHeight);
+		terrainDistanceFieldScale = new Vector4(1f / width, 1f / height, width, height);
 		terrainDistanceField.antiAliasing = 1;
 		terrainDistanceField.filterMode = FilterMode.Bilinear;
 		terrainDistanceField.hideFlags = HideFlags.DontSave;
@@ -133,7 +131,7 @@ public class TerrainSystem : MonoBehaviour {
 		}
 
 		if (debrisSystem == null) {
-			debrisSystem = new DebrisSystem(65536, 0.01f, debrisMaterial, new Bounds(Vector3.zero, new Vector3(width, height, 100)));
+			debrisSystem = new DebrisSystem(65536, 0.01f, debrisMaterial, new Bounds(Vector3.zero, new Vector3(width, height, 100)), this);
 		}
 		debrisSystem.Update();
 	} 
