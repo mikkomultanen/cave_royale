@@ -27,9 +27,12 @@ Shader "CaveRoyale/DistanceFieldDebug" {
             //Fragment Shader
             float4 frag (v2f_img i) : COLOR {
                 float4 value = tex2D (_TerrainDistanceField, i.uv);
-                clip(0.5 - value.x);
-                float d = (1 - 2 * value.x) * _TerrainDistanceFieldMultiplier;
-                if (d < 1) {
+                float d = (2 * value.x - 1) * _TerrainDistanceFieldMultiplier;
+                clip(1 - d);
+                if (d > 0) {
+                    return float4(value.yz, 0, 0.5);
+                }
+                if (d > -1) {
                     return float4(value.yz, 0, 1);
                 }
                 return float4(0.5, 0.2, 0, 1);

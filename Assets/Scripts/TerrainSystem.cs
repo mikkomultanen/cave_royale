@@ -80,7 +80,7 @@ public class TerrainSystem : MonoBehaviour {
 	
 	private void OnEnable() {
 		terrainDistanceField = new RenderTexture(width / 4, height / 4, 0, RenderTextureFormat.ARGB2101010, RenderTextureReadWrite.Linear);
-		terrainDistanceFieldMultiplier = 8;
+		terrainDistanceFieldMultiplier = 4;
 		terrainDistanceFieldScale = new Vector4(1f / width, 1f / height, width, height);
 		terrainDistanceField.antiAliasing = 1;
 		terrainDistanceField.filterMode = FilterMode.Bilinear;
