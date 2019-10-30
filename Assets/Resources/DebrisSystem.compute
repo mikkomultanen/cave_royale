@@ -84,14 +84,8 @@ void SolveConstraints(uint id : SV_DispatchThreadID)
     float3 td = 2 * _TerrainDistanceField.SampleLevel(sampler_TerrainDistanceField, uv, 0) - 1;
     float distance = td.x * _TerrainDistanceFieldMultiplier;
     if (distance < 0.5) {
-        const float2 position = PositionsREAD[id];
-        float2 delta = predicted - position;
-        float maxDeltaLength = length(delta);
         const float2 n = normalized(td.yz);
         predicted += (0.5 - distance) * n;
-        delta = predicted - position;
-        float newDeltaLength = length(delta);
-        predicted = position + delta * (min(0.5 * maxDeltaLength, newDeltaLength) / max(newDeltaLength, 0.0001));
     }
     PredictedWRITE[id] = predicted;
 }

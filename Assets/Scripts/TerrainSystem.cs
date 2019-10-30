@@ -79,7 +79,7 @@ public class TerrainSystem : MonoBehaviour {
     }
 	
 	private void OnEnable() {
-		terrainDistanceField = new RenderTexture(width / 4, height / 4, 0, RenderTextureFormat.ARGB2101010, RenderTextureReadWrite.Linear);
+		terrainDistanceField = new RenderTexture(width, height, 0, RenderTextureFormat.ARGB2101010, RenderTextureReadWrite.Linear);
 		terrainDistanceFieldMultiplier = 4;
 		terrainDistanceFieldScale = new Vector4(1f / width, 1f / height, width, height);
 		terrainDistanceField.antiAliasing = 1;
@@ -153,16 +153,16 @@ public class TerrainSystem : MonoBehaviour {
 		Graphics.Blit(voronoi1, voronoi2, voronoiMaterial, 1);
 
 		voronoiMaterial.SetVector("_DistanceScale", terrainDistanceFieldScale);
+		voronoiMaterial.SetFloat("_DistanceMultiplier", terrainDistanceFieldMultiplier);
 
-		RenderTexture distanceField = RenderTexture.GetTemporary(width, height, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear, 1);
+		RenderTexture distanceField = RenderTexture.GetTemporary(width, height, 0, RenderTextureFormat.R16, RenderTextureReadWrite.Linear, 1);
 		distanceField.filterMode = FilterMode.Bilinear;
 		Graphics.Blit(voronoi2, distanceField, voronoiMaterial, 2);
 
 		RenderTexture.ReleaseTemporary(voronoi1);
 		RenderTexture.ReleaseTemporary(voronoi2);
 
-		voronoiMaterial.SetFloat("_BoxOffset", 1);
-		Graphics.Blit(distanceField, terrainDistanceField, voronoiMaterial, 3);
+		Graphics.Blit(distanceField, terrainDistanceField, voronoiMaterial, 4);
 
 		RenderTexture.ReleaseTemporary(distanceField);
 	}

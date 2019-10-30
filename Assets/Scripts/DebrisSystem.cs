@@ -124,7 +124,6 @@ namespace CaveRoyale {
         {
             int solveConstraintsKernel = computeShader.FindKernel("SolveConstraints");
             computeShader.SetTexture(solveConstraintsKernel, "_TerrainDistanceField", terrainSystem.terrainDistanceField);
-            computeShader.SetBuffer(solveConstraintsKernel, "PositionsREAD", positionsBuffer);
             computeShader.SetBuffer(solveConstraintsKernel, "PredictedREAD", predictedBuffers[READ]);
             computeShader.SetBuffer(solveConstraintsKernel, "Lifetimes", lifetimesBuffer);
             computeShader.SetBuffer(solveConstraintsKernel, "PredictedWRITE", predictedBuffers[WRITE]);

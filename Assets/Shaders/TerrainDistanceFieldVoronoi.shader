@@ -11,6 +11,7 @@ Shader "CaveRoyale/Voronoi" {
 
     sampler2D _MainTex;
     float4 _MainTex_TexelSize;
+    float _TerrainDistanceFieldMultiplier;
 
     half4 Sample (float2 uv) {
         return tex2D(_MainTex, uv);
@@ -22,6 +23,28 @@ Shader "CaveRoyale/Voronoi" {
             Sample(uv + o.xy) + Sample(uv + o.zy) +
             Sample(uv + o.xw) + Sample(uv + o.zw);
         return s * 0.25f;
+    }
+
+    float2 Normal (float2 uv) {
+        float3 o = float3(_MainTex_TexelSize.xy * 0.5, 0);
+        float t = (2 * tex2D(_MainTex, uv + o.zy) - 1) * _TerrainDistanceFieldMultiplier;
+        float b = (2 * tex2D(_MainTex, uv - o.zy) - 1) * _TerrainDistanceFieldMultiplier;
+        float l = (2 * tex2D(_MainTex, uv - o.xz) - 1) * _TerrainDistanceFieldMultiplier;
+        float r = (2 * tex2D(_MainTex, uv + o.xz) - 1) * _TerrainDistanceFieldMultiplier;
+        float2 n = float2(r - l, t - b);
+        float len = length(n);
+        return n / max(0.2, len);
+    }
+
+    float Distance (float2 v) {
+        v = abs(v);
+        if (v.x > 0.9) {
+            v.x -= 0.5;
+        } 
+        if (v.y > 0.9) {
+            v.y -= 0.5;
+        }
+        return length(v);
     }
 
     ENDCG
@@ -103,6 +126,7 @@ Shader "CaveRoyale/Voronoi" {
             #pragma fragment frag
 
             float4 _DistanceScale;
+            float _DistanceMultiplier;
 
             //Fragment Shader
             float4 frag (v2f_img i) : COLOR {
@@ -110,18 +134,16 @@ Shader "CaveRoyale/Voronoi" {
                 
                 float2 bestCoord = data.xy;
                 float2 v = (i.uv - bestCoord) * _DistanceScale.zw;
-                float d = length(v);
-                float2 normal = lerp(float2(0, 0), v / max(0.2, d), all(bestCoord));
+                float d = Distance(v) / _DistanceMultiplier;
 
                 float2 bestInnerCoord = data.zw;
                 float2 innerV = (bestInnerCoord - i.uv) * _DistanceScale.zw;
-                float2 innerD = length(innerV);
-                float2 innerNormal = lerp(float2(0, 0), innerV / max(0.2, innerD), all(bestInnerCoord));;
+                float2 innerD = Distance(innerV) / _DistanceMultiplier;
 
                 float distance = 0.5 * lerp(1, saturate(d), all(bestCoord)) +
                     0.5 * lerp(0, 1 - saturate(innerD), all(bestInnerCoord));
                 
-                return float4(distance, 0.5 * (normal + innerNormal) + 0.5, 1);
+                return float4(distance, 0, 0, 1);
             }
             ENDCG
         }
@@ -136,6 +158,19 @@ Shader "CaveRoyale/Voronoi" {
             //Fragment Shader
             half4 frag (v2f_img i) : COLOR {
                 return SampleBox(i.uv, _BoxOffset);
+            }
+            ENDCG
+        }
+
+        Pass { // 4 calculate normal 
+            CGPROGRAM
+            #pragma vertex vert_img
+            #pragma fragment frag
+
+            //Fragment Shader
+            half4 frag (v2f_img i) : COLOR {
+                float h = tex2D(_MainTex, i.uv);
+                return half4(h, 0.5 * Normal(i.uv) + 0.5, 1);
             }
             ENDCG
         }
