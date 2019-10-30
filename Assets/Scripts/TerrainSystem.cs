@@ -131,7 +131,7 @@ public class TerrainSystem : MonoBehaviour {
 		}
 
 		if (debrisSystem == null) {
-			debrisSystem = new DebrisSystem(65536, 1/60f, debrisMaterial, new Bounds(Vector3.zero, new Vector3(width, height, 100)), this);
+			debrisSystem = new DebrisSystem(65536, 1/120f, debrisMaterial, new Bounds(Vector3.zero, new Vector3(width, height, 100)), this);
 		}
 		debrisSystem.Update();
 	} 

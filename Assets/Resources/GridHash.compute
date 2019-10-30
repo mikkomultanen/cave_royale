@@ -1,0 +1,69 @@
+﻿const int INVALID_HASH = 0x7fffffff;
+//the constants used for calculate cellID of particles AKA hash values
+float HashScale;
+float2 HashSize;
+float2 HashTranslate;
+//the indexmap and start/end index buffer
+RWStructuredBuffer<int2> IndexMap;
+RWStructuredBuffer<int2> Table;
+
+//the "hash" function to find the grid that each cell lies in
+int Hash(float2 p)
+{
+	p = (p - HashTranslate) * HashScale;
+	int2 i = clamp(p, 0, HashSize - 1);
+
+	return i.x + i.y * HashSize.x;
+}
+//Macro defining the size of a workgroup
+#define THREADS 128
+//the data buffer of particle positons and lifetimes
+StructuredBuffer<float2> Positions;
+StructuredBuffer<float2> Lifetimes;
+//the uniform variables that stores the number of particles
+int Width;
+
+//the kernel that calculates Hash value of every particle
+#pragma kernel HashParticles
+[numthreads(THREADS, 1, 1)]
+void HashParticles(int id : SV_DispatchThreadID)
+{
+	int2 index;
+	index.y = id;
+
+	if (id < Width)
+	{
+		float2 lifetime = Lifetimes[id];
+		index.x = lifetime.x > lifetime.y ? INVALID_HASH : Hash(Positions[id].xy);
+		IndexMap[id] = index;
+	}
+}
+
+//the kernel used for clearing the start/end index table
+#pragma kernel ClearTable
+[numthreads(THREADS, 1, 1)]
+void ClearTable(int id : SV_DispatchThreadID)
+{
+	if (id < Width)
+		Table[id] = 0;
+}
+
+//the kernel that maps the SORTED cellID-particleID pairs into a start/end index table
+#pragma kernel MapTable
+[numthreads(THREADS, 1, 1)]
+void MapTable(int id : SV_DispatchThreadID)
+{
+	if (id < Width)
+	{
+		int hash = IndexMap[id].x;
+		if (hash == INVALID_HASH)
+			return;
+		//if this entry starts a new block, store its index in the x field
+		if (id == 0 || hash != IndexMap[id - 1].x)
+			Table[hash].x = id;
+		//the this entry is the end to a block, store its index in the y field.
+		if (id == Width - 1 || hash != IndexMap[id + 1].x)
+			Table[hash].y = id;
+	}
+}
+

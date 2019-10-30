@@ -1,5 +1,19 @@
 #define THREADS 128
 
+//the constants used for calculate cellID of particles AKA hash values
+float HashScale;
+float2 HashSize;
+float2 HashTranslate;
+//the indexmap and start/end index buffer
+StructuredBuffer<int2> IndexMap;
+StructuredBuffer<int2> Table;
+
+int2 HashIndex(float2 p)
+{
+	p = (p - HashTranslate) * HashScale;
+	return clamp(p, 0, HashSize - 1);
+}
+
 StructuredBuffer<float2> PositionsREAD;
 RWStructuredBuffer<float2> PositionsWRITE;
 StructuredBuffer<float2> VelocitiesREAD;
@@ -65,6 +79,17 @@ void PredictPositions (uint id : SV_DispatchThreadID)
     PredictedWRITE[id] = PositionsREAD[id] + velocity * DT;
 }
 
+#define LOOP_START \
+[unroll] \
+for (int j = -1; j <= 1; j++) \
+{ \
+[unroll] \
+for (int i = -1; i <= 1; i++) \
+{ \
+
+#define LOOP_END \
+} } \
+
 float2 normalized(float2 v)
 {
     return v / max(length(v), 0.0001);
@@ -80,6 +105,38 @@ void SolveConstraints(uint id : SV_DispatchThreadID)
     if (lifetime.x > lifetime.y) return;
 
     float2 predicted = PredictedREAD[id];
+
+    float2 correction = float2(0, 0);
+    int2 hashIndex = HashIndex(predicted);
+	int2 size = HashSize;
+
+    LOOP_START
+
+    int xi = hashIndex.x + i;
+    int yj = hashIndex.y + j;
+
+	if (xi < 0 || xi >= size.x) continue;
+	if (yj < 0 || yj >= size.y) continue;
+
+    int hash = xi + yj * size.x;
+    int2 bounds = Table[hash];
+
+    for (int idx = bounds.x; idx <= bounds.y; idx++)
+	{
+		uint n = IndexMap[idx].y;
+		if (n == id) continue;
+
+        float2 v = predicted - PredictedREAD[n];
+        float d = length(v);
+        if (d < 1) {
+            correction += 0.5 * (1 - d) / max(0.5, d) * v;
+        }
+    }
+
+    LOOP_END
+
+    predicted += correction;
+
     float2 uv = predicted * _TerrainDistanceFieldScale.xy + 0.5;
     float3 td = 2 * _TerrainDistanceField.SampleLevel(sampler_TerrainDistanceField, uv, 0) - 1;
     float distance = td.x * _TerrainDistanceFieldMultiplier;
@@ -106,7 +163,13 @@ void Update(uint id : SV_DispatchThreadID)
     } else {
         Alive.Append(id);
         float2 predictedPosition = PredictedREAD[id];
-        VelocitiesWRITE[id] = (predictedPosition - PositionsWRITE[id]) / DT;
+        float2 velocity = (predictedPosition - PositionsWRITE[id]) / DT;
+        float speed = length(velocity);
+        float maxSpeed = 0.7 / DT;
+        if (speed > maxSpeed) {
+            velocity *= maxSpeed / speed;
+        }
+        VelocitiesWRITE[id] = velocity;
         PositionsWRITE[id] = predictedPosition; 
     }
 }

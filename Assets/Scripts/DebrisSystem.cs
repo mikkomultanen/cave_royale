@@ -27,6 +27,7 @@ namespace CaveRoyale {
         private ComputeBuffer argsBuffer;
         private Mesh mesh;
         private ComputeShader computeShader;
+        private GridHash hash;
         private List<Vector4> emitList = new List<Vector4>();
 
         public DebrisSystem(int maxNumParticles, float timestep, Material material, Bounds bounds, TerrainSystem terrainSystem)
@@ -60,7 +61,7 @@ namespace CaveRoyale {
             computeShader = (ComputeShader)Resources.Load("DebrisSystem");
             computeShader.SetFloat("DT", timestep);
             computeShader.SetVector("Gravity", new Vector2(0, -98.1f));
-            computeShader.SetFloat("Damping", 0.1f);
+            computeShader.SetFloat("Damping", 0.5f);
     		computeShader.SetVector("_TerrainDistanceFieldScale", terrainSystem.terrainDistanceFieldScale);
             computeShader.SetFloat("_TerrainDistanceFieldMultiplier", terrainSystem.terrainDistanceFieldMultiplier);
 
@@ -71,6 +72,11 @@ namespace CaveRoyale {
             computeShader.SetBuffer(initKernel, "Lifetimes", lifetimesBuffer);
             computeShader.SetBuffer(initKernel, "Dead", deadBuffer);
             computeShader.Dispatch(initKernel, Groups(maxNumParticles), 1, 1);
+
+            hash = new GridHash(bounds, maxNumParticles, 1);
+            computeShader.SetFloat("HashScale", hash.InvCellSize);
+            computeShader.SetVector("HashSize", hash.Bounds.size);
+            computeShader.SetVector("HashTranslate", hash.Bounds.min);
         }
 
         public void Update()
@@ -81,7 +87,10 @@ namespace CaveRoyale {
             while (nextFrameTime > timestep) {
                 nextFrameTime -= timestep;
                 DispatchPredictPositions();
-                DispatchSolveConstraints();
+                hash.Process(predictedBuffers[READ], lifetimesBuffer);
+                for (int i = 0; i < 4; i++) {
+                    DispatchSolveConstraints();
+                }
                 DispatchUpdate();
             }
 
@@ -123,6 +132,8 @@ namespace CaveRoyale {
         private void DispatchSolveConstraints()
         {
             int solveConstraintsKernel = computeShader.FindKernel("SolveConstraints");
+            computeShader.SetBuffer(solveConstraintsKernel, "IndexMap", hash.IndexMap);
+            computeShader.SetBuffer(solveConstraintsKernel, "Table", hash.Table);
             computeShader.SetTexture(solveConstraintsKernel, "_TerrainDistanceField", terrainSystem.terrainDistanceField);
             computeShader.SetBuffer(solveConstraintsKernel, "PredictedREAD", predictedBuffers[READ]);
             computeShader.SetBuffer(solveConstraintsKernel, "Lifetimes", lifetimesBuffer);
@@ -179,6 +190,7 @@ namespace CaveRoyale {
             ComputeUtilities.Release(ref aliveBuffer);
             ComputeUtilities.Release(ref counter);
             mesh = null;
+            hash.Dispose();
         }
 
         private static void Swap(ComputeBuffer[] buffers)
