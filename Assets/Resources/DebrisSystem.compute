@@ -142,7 +142,12 @@ void SolveConstraints(uint id : SV_DispatchThreadID)
     float distance = td.x * _TerrainDistanceFieldMultiplier;
     if (distance < 0.5) {
         const float2 n = normalized(td.yz);
-        predicted += (0.5 - distance) * n;
+        float2 dp = predicted - PositionsREAD[id];
+        float2 dp_n = dot(dp, n) * n;
+        float2 dp_t = dp - dp_n;
+        float dp_t_length = length(dp_t);
+        float b = 1 - max((dp_t_length - 0.6 * length(dp_n)) / dp_t_length, 0);
+        predicted += (0.5 - distance) * n - b * dp_t;
     }
     PredictedWRITE[id] = predicted;
 }
