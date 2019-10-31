@@ -120,41 +120,27 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!84 &586995967
-RenderTexture:
+--- !u!21 &848925498
+Material:
+  serializedVersion: 6
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: 
-  m_ImageContentsHash:
-    serializedVersion: 2
-    Hash: 00000000000000000000000000000000
-  m_ForcedFallbackFormat: 4
-  m_DownscaleFallback: 0
-  serializedVersion: 3
-  m_Width: 1920
-  m_Height: 1080
-  m_AntiAliasing: 1
-  m_MipCount: -1
-  m_DepthFormat: 0
-  m_ColorFormat: 5
-  m_MipMap: 0
-  m_GenerateMips: 1
-  m_SRGB: 0
-  m_UseDynamicScale: 0
-  m_BindMS: 0
-  m_EnableCompatibleFormat: 1
-  m_TextureSettings:
-    serializedVersion: 2
-    m_FilterMode: 0
-    m_Aniso: 1
-    m_MipBias: 0
-    m_WrapU: 1
-    m_WrapV: 1
-    m_WrapW: 1
-  m_Dimension: 2
-  m_VolumeDepth: 1
+  m_Name: CaveRoyale/DistanceFieldDebug
+  m_Shader: {fileID: 4800000, guid: 19ab75f9cf2fb4f999243642fccb9934, type: 3}
+  m_ShaderKeywords: 
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs: []
+    m_Floats: []
+    m_Colors: []
 --- !u!43 &947789466
 Mesh:
   m_ObjectHideFlags: 0
@@ -415,27 +401,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   terrainSystem: {fileID: 1569559394}
---- !u!21 &1069006663
-Material:
-  serializedVersion: 6
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: CaveRoyale/DistanceFieldDebug
-  m_Shader: {fileID: 4800000, guid: 19ab75f9cf2fb4f999243642fccb9934, type: 3}
-  m_ShaderKeywords: 
-  m_LightmapFlags: 4
-  m_EnableInstancingVariants: 0
-  m_DoubleSidedGI: 0
-  m_CustomRenderQueue: -1
-  stringTagMap: {}
-  disabledShaderPasses: []
-  m_SavedProperties:
-    serializedVersion: 3
-    m_TexEnvs: []
-    m_Floats: []
-    m_Colors: []
 --- !u!1 &1569559392
 GameObject:
   m_ObjectHideFlags: 0
@@ -483,8 +448,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   width: 1920
   height: 1080
-  terrain: {fileID: 586995967}
-  terrainDistanceField: {fileID: 0}
   terrainMaterial: {fileID: 2100000, guid: 47406be52feaf497597a67e170631757, type: 2}
   debrisMaterial: {fileID: 2100000, guid: c0f5a260df25d484c92d0f273711480a, type: 2}
 --- !u!23 &1569559395
@@ -504,7 +467,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 1069006663}
+  - {fileID: 848925498}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0

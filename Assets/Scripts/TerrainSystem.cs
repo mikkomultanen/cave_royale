@@ -10,8 +10,8 @@ public class TerrainSystem : MonoBehaviour {
 
 	public int width = 1920;
 	public int height = 1080;
-	public RenderTexture terrain;
-	public RenderTexture terrainDistanceField;
+	public RenderTexture terrain { get; private set; }
+	public RenderTexture terrainDistanceField { get; private set; }
 	public float terrainDistanceFieldMultiplier { get; private set; }
 	public Vector4 terrainDistanceFieldScale { get; private set; }
 	public Material terrainMaterial;
