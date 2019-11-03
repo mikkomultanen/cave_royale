@@ -2,17 +2,29 @@
 
 RWTexture2D<float4> terrain;
 StructuredBuffer<float4> explosions;
+AppendStructuredBuffer<float4> emitDebris;
+
 uint _Count;
+uint Width;
+uint Height;
 
 [numthreads(8,8,1)]
 void DestroyTerrain (uint3 id : SV_DispatchThreadID)
 {
+    if (id.x >= Width || id.y >= Height)
+        return;
+
+    const float2 pos = id.xy - float2(Width / 2, Height / 2);
+
     for (uint i = 0; i < _Count; i++) {
         float4 e = explosions[i];
-        float2 v = e.xy - id.xy;
+        float2 v = pos - e.xy;
         float r2 = dot(v, v);
         if (r2 < e.z) {
-            terrain[id.xy] = float4(0, 0, 0, 0);
+            if (terrain[id.xy].x  > 0) {
+                terrain[id.xy] = float4(0, 0, 0, 0);
+                emitDebris.Append(float4(pos, v / max(0.01, r2)));
+            }
         }
     }
 }

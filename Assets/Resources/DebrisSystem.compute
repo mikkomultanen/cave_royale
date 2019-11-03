@@ -25,10 +25,12 @@ AppendStructuredBuffer<uint> Dead;
 ConsumeStructuredBuffer<uint> Pool;
 AppendStructuredBuffer<uint> Alive;
 StructuredBuffer<uint> Counter;
+StructuredBuffer<uint> UploadCounter;
 StructuredBuffer<float4> Uploads;
 
 uint Width;
 uint CounterOffset;
+uint UploadCounterOffset;
 float Lifetime;
 float DT;
 float2 Gravity;
@@ -64,6 +66,19 @@ void Emit (uint id : SV_DispatchThreadID)
 	}
 }
 
+#pragma kernel EmitIndirect
+[numthreads(THREADS,1,1)]
+void EmitIndirect (uint id : SV_DispatchThreadID)
+{
+	if (id < UploadCounter[UploadCounterOffset] && id < Counter[CounterOffset]) {
+		float4 upload = Uploads[id];
+		uint idx = Pool.Consume();
+        PositionsWRITE[idx] = upload.xy;
+        VelocitiesWRITE[idx] = upload.zw;
+        Lifetimes[idx] = float2(0, Lifetime);
+	}
+}
+
 #pragma kernel PredictPositions
 [numthreads(THREADS,1,1)]
 void PredictPositions (uint id : SV_DispatchThreadID)
@@ -76,6 +91,11 @@ void PredictPositions (uint id : SV_DispatchThreadID)
     float2 velocity = VelocitiesREAD[id];
     velocity -= velocity * Damping * DT;
     velocity += Gravity * DT;
+    float speed = length(velocity);
+    float maxSpeed = 0.7 / DT;
+    if (speed > maxSpeed) {
+        velocity *= maxSpeed / speed;
+    }
     PredictedWRITE[id] = PositionsREAD[id] + velocity * DT;
 }
 
@@ -168,13 +188,7 @@ void Update(uint id : SV_DispatchThreadID)
     } else {
         Alive.Append(id);
         float2 predictedPosition = PredictedREAD[id];
-        float2 velocity = (predictedPosition - PositionsWRITE[id]) / DT;
-        float speed = length(velocity);
-        float maxSpeed = 0.7 / DT;
-        if (speed > maxSpeed) {
-            velocity *= maxSpeed / speed;
-        }
-        VelocitiesWRITE[id] = velocity;
+        VelocitiesWRITE[id] = (predictedPosition - PositionsWRITE[id]) / DT;
         PositionsWRITE[id] = predictedPosition; 
     }
 }

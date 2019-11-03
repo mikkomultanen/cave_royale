@@ -12,6 +12,7 @@ namespace CaveRoyale {
         private const int READ = 0;
         private const int WRITE = 1;
         private float timestep;
+        private int maxIterations;
         private Material material;
         private Bounds bounds;
         private TerrainSystem terrainSystem;
@@ -24,15 +25,17 @@ namespace CaveRoyale {
         private ComputeBuffer aliveBuffer;
         private ComputeBuffer emitBuffer;
         private ComputeBuffer counter;
+        private ComputeBuffer emitCounter;
         private ComputeBuffer argsBuffer;
         private Mesh mesh;
         private ComputeShader computeShader;
         private GridHash hash;
         private List<Vector4> emitList = new List<Vector4>();
 
-        public DebrisSystem(int maxNumParticles, float timestep, Material material, Bounds bounds, TerrainSystem terrainSystem)
+        public DebrisSystem(int maxNumParticles, float timestep, int maxIterations, Material material, Bounds bounds, TerrainSystem terrainSystem)
         {
             this.timestep = timestep;
+            this.maxIterations = maxIterations;
             this.material = material;
             this.bounds = bounds;
             this.terrainSystem = terrainSystem;
@@ -50,6 +53,8 @@ namespace CaveRoyale {
             emitBuffer = new ComputeBuffer(THREADS, Marshal.SizeOf(typeof(Vector4)));
             counter = new ComputeBuffer(4, Marshal.SizeOf(typeof(uint)), ComputeBufferType.IndirectArguments);
             counter.SetData(new int[] { 0, 1, 0, 0 });
+            emitCounter = new ComputeBuffer(4, Marshal.SizeOf(typeof(uint)), ComputeBufferType.IndirectArguments);
+            emitCounter.SetData(new int[] { 0, 1, 0, 0 });
             argsBuffer = new ComputeBuffer(5, Marshal.SizeOf(typeof(uint)), ComputeBufferType.IndirectArguments);
 
             GameObject o = GameObject.CreatePrimitive(PrimitiveType.Quad);
@@ -84,7 +89,7 @@ namespace CaveRoyale {
             DispatchEmit();
 
             nextFrameTime += Time.deltaTime;
-            while (nextFrameTime > timestep) {
+            for (int j = 0; j < maxIterations && nextFrameTime > timestep; j++) {
                 nextFrameTime -= timestep;
                 DispatchPredictPositions();
                 hash.Process(predictedBuffers[READ], lifetimesBuffer);
@@ -95,6 +100,24 @@ namespace CaveRoyale {
             }
 
             Render();
+        }
+
+        public void DispatchEmitIndirect(ComputeBuffer uploads) 
+        {
+            int emitKernel = computeShader.FindKernel("EmitIndirect");
+            ComputeBuffer.CopyCount(uploads, emitCounter, 0);
+            ComputeBuffer.CopyCount(deadBuffer, counter, 0);
+            computeShader.SetInt("UploadCounterOffset", 0);
+            computeShader.SetInt("CounterOffset", 0);
+            computeShader.SetFloat("Lifetime", 1000);
+            computeShader.SetBuffer(emitKernel, "UploadCounter", emitCounter);
+            computeShader.SetBuffer(emitKernel, "Counter", counter);
+            computeShader.SetBuffer(emitKernel, "Uploads", uploads);
+            computeShader.SetBuffer(emitKernel, "Pool", deadBuffer);
+            computeShader.SetBuffer(emitKernel, "PositionsWRITE", positionsBuffer);
+            computeShader.SetBuffer(emitKernel, "VelocitiesWRITE", velocitiesBuffer);
+            computeShader.SetBuffer(emitKernel, "Lifetimes", lifetimesBuffer);
+            computeShader.Dispatch(emitKernel, Groups(uploads.count), 1, 1);
         }
 
         private void DispatchEmit()
