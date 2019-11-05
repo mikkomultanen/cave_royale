@@ -120,7 +120,7 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!21 &848925498
+--- !u!21 &413535781
 Material:
   serializedVersion: 6
   m_ObjectHideFlags: 0
@@ -358,7 +358,7 @@ Camera:
   far clip plane: 500
   field of view: 60
   orthographic: 1
-  orthographic size: 540
+  orthographic size: 135
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -467,7 +467,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 848925498}
+  - {fileID: 413535781}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
