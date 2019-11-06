@@ -1,4 +1,6 @@
 #define THREADS 128
+#define D 1.1283791671
+#define R 0.5641895836
 
 //the constants used for calculate cellID of particles AKA hash values
 float HashScale;
@@ -139,9 +141,9 @@ void SolveCollisions(uint id : SV_DispatchThreadID)
 
         float2 r = predicted - PositionsREAD[n];
         float d = length(r);
-        if (d < 1) {
+        if (d < D) {
             const float2 normal = d < 0.001 ? float2(id < n ? 1 : -1, 0) : (r / d);
-            correction += 0.49 * (1 - d) * normal;
+            correction += 0.5 * (D - d) * normal;
 
             float2 rv = velocity - VelocitiesREAD[n];
             float velocityAlongNormal = dot(rv, normal);
@@ -163,9 +165,9 @@ void SolveCollisions(uint id : SV_DispatchThreadID)
     float2 uv = predicted * _TerrainDistanceFieldScale.xy + 0.5;
     float3 td = 2 * _TerrainDistanceField.SampleLevel(sampler_TerrainDistanceField, uv, 0) - 1;
     float distance = td.x * _TerrainDistanceFieldMultiplier;
-    if (distance < 0.5) {
+    if (distance < R) {
         const float2 normal = normalized(td.yz);
-        predicted += (0.49 - distance) * normal;
+        predicted += (R - distance) * normal;
 
         float velocityAlongNormal = dot(velocity, normal);
         if (velocityAlongNormal < 0) {

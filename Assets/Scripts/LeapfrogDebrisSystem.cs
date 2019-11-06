@@ -74,7 +74,7 @@ namespace CaveRoyale {
             computeShader.SetBuffer(initKernel, "Dead", deadBuffer);
             computeShader.Dispatch(initKernel, Groups(maxNumParticles), 1, 1);
 
-            hash = new GridHash(bounds, maxNumParticles, 1);
+            hash = new GridHash(bounds, maxNumParticles, 1.1283791671f);
             computeShader.SetFloat("HashScale", hash.InvCellSize);
             computeShader.SetVector("HashSize", hash.Bounds.size);
             computeShader.SetVector("HashTranslate", hash.Bounds.min);
