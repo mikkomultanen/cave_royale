@@ -2,7 +2,8 @@
 #define D 1.1283791671
 #define R 0.5641895836
 #define MAX_MOTION 10
-#define MOTION_COEFFICIENT 0.01
+#define MOTION_COEFFICIENT 0.1
+#define MOTION_THRESHOLD 1
 
 //the constants used for calculate cellID of particles AKA hash values
 float HashScale;
@@ -27,6 +28,7 @@ RWStructuredBuffer<float> Motions;
 AppendStructuredBuffer<uint> Dead;
 ConsumeStructuredBuffer<uint> Pool;
 AppendStructuredBuffer<uint> Alive;
+AppendStructuredBuffer<float2> Burn;
 StructuredBuffer<uint> Counter;
 StructuredBuffer<uint> UploadCounter;
 StructuredBuffer<float4> Uploads;
@@ -77,6 +79,13 @@ void Update(uint id : SV_DispatchThreadID)
     float2 lifetime = Lifetimes[id];
     if (lifetime.x > lifetime.y) return;
 
+    float motion = Motions[id];
+    float2 oldPosition = PositionsREAD[id];
+    if (motion < MOTION_THRESHOLD) {
+        lifetime.x = lifetime.y;
+        Burn.Append(oldPosition);
+    }
+
     lifetime.x += DT;
     Lifetimes[id] = lifetime;
     if (lifetime.x > lifetime.y) {
@@ -92,7 +101,7 @@ void Update(uint id : SV_DispatchThreadID)
             velocity *= maxSpeed / speed;
         }
         VelocitiesWRITE[id] = velocity;
-        PositionsWRITE[id] = PositionsREAD[id] + velocity * DT; 
+        PositionsWRITE[id] = oldPosition + velocity * DT; 
     }
 }
 

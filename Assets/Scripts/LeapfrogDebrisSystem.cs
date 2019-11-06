@@ -29,6 +29,9 @@ namespace CaveRoyale {
         // Particles to render
         private ComputeBuffer aliveBuffer;
 
+        // Particles which should be added to terrain
+        private ComputeBuffer burnBuffer;
+
         // Size of the pool buffer
         private ComputeBuffer counter;
 
@@ -64,6 +67,9 @@ namespace CaveRoyale {
             deadBuffer.SetCounterValue(0);
             aliveBuffer = new ComputeBuffer(maxNumParticles, Marshal.SizeOf(typeof(uint)), ComputeBufferType.Append);
             aliveBuffer.SetCounterValue(0);
+            burnBuffer = new ComputeBuffer(maxNumParticles, Marshal.SizeOf(typeof(Vector2)), ComputeBufferType.Append);
+            burnBuffer.SetCounterValue(0);
+
             counter = new ComputeBuffer(4, Marshal.SizeOf(typeof(uint)), ComputeBufferType.IndirectArguments);
             counter.SetData(new int[] { 0, 1, 0, 0 });
             emitCounter = new ComputeBuffer(4, Marshal.SizeOf(typeof(uint)), ComputeBufferType.IndirectArguments);
@@ -106,6 +112,7 @@ namespace CaveRoyale {
                     DispatchSolveCollisions();
                 }
             }
+            terrainSystem.AddTerrainIndirect(burnBuffer);
 
             Render();
         }
@@ -133,18 +140,20 @@ namespace CaveRoyale {
         {
             int updateKernel = computeShader.FindKernel("Update");
     		aliveBuffer.SetCounterValue(0);
+            burnBuffer.SetCounterValue(0);
             computeShader.SetInt("Width", lifetimesBuffer.count);
             computeShader.SetBuffer(updateKernel, "Lifetimes", lifetimesBuffer);
             computeShader.SetBuffer(updateKernel, "Motions", motionsBuffer);
             computeShader.SetBuffer(updateKernel, "Dead", deadBuffer);
             computeShader.SetBuffer(updateKernel, "Alive", aliveBuffer);
+            computeShader.SetBuffer(updateKernel, "Burn", burnBuffer);
             computeShader.SetBuffer(updateKernel, "PositionsREAD", positionsBuffers[READ]);
             computeShader.SetBuffer(updateKernel, "VelocitiesREAD", velocitiesBuffers[READ]);
             computeShader.SetBuffer(updateKernel, "PositionsWRITE", positionsBuffers[WRITE]);
             computeShader.SetBuffer(updateKernel, "VelocitiesWRITE", velocitiesBuffers[WRITE]);
             computeShader.Dispatch(updateKernel, Groups(lifetimesBuffer.count), 1, 1);
-            Swap(positionsBuffers);
-            Swap(velocitiesBuffers);
+            ComputeUtilities.Swap(positionsBuffers);
+            ComputeUtilities.Swap(velocitiesBuffers);
         }
 
         private void DispatchSolveCollisions()
@@ -159,8 +168,8 @@ namespace CaveRoyale {
             computeShader.SetBuffer(solveConstraintsKernel, "PositionsWRITE", positionsBuffers[WRITE]);
             computeShader.SetBuffer(solveConstraintsKernel, "VelocitiesWRITE", velocitiesBuffers[WRITE]);
             computeShader.Dispatch(solveConstraintsKernel, Groups(lifetimesBuffer.count), 1, 1);
-            Swap(positionsBuffers);
-            Swap(velocitiesBuffers);
+            ComputeUtilities.Swap(positionsBuffers);
+            ComputeUtilities.Swap(velocitiesBuffers);
         }
 
         private void Render()
@@ -195,13 +204,6 @@ namespace CaveRoyale {
             ComputeUtilities.Release(ref argsBuffer);
             mesh = null;
             hash.Dispose();
-        }
-
-        private static void Swap(ComputeBuffer[] buffers)
-        {
-            ComputeBuffer tmp = buffers[0];
-            buffers[0] = buffers[1];
-            buffers[1] = tmp;
         }
     }
 }
