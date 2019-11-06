@@ -123,7 +123,8 @@ public class TerrainSystem : MonoBehaviour {
 		}
 
 		if (debrisSystem == null) {
-			debrisSystem = new VerletDebrisSystem(65536, 1/120f, 3, debrisMaterial, new Bounds(Vector3.zero, new Vector3(width, height, 100)), this);
+			debrisSystem = new LeapfrogDebrisSystem(65536, 1/120f, 3, debrisMaterial, new Bounds(Vector3.zero, new Vector3(width, height, 100)), this);
+			//debrisSystem = new VerletDebrisSystem(65536, 1/120f, 3, debrisMaterial, new Bounds(Vector3.zero, new Vector3(width, height, 100)), this);
 		}
 
 		if (explosionsList.Count > 0) {
