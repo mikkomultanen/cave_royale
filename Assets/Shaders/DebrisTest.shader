@@ -37,9 +37,11 @@ Shader "Unlit/DebrisTest"
 			{
 				float4 pos : SV_POSITION;
 				float2 uv : TEXCOORD0;
+				float4 color : TEXCOORD1;
 			};
 			
 			StructuredBuffer<float2> _Positions;
+			StructuredBuffer<float> _Motions;
 			StructuredBuffer<uint> _Alive;
 			float _Scale;
 			
@@ -53,13 +55,14 @@ Shader "Unlit/DebrisTest"
 				v2f o;
 				o.pos = UnityObjectToClipPos(v.vertex);
                 o.uv = TRANSFORM_TEX(v.uv,_MainTex);
+				o.color = float4(0.1 * _Motions[idx], 0, 0, 1);
 				return o;
 			}
 			
 			fixed4 frag (v2f i) : SV_Target
 			{
 				clip(0.5 - length(i.uv - 0.5));
-				return tex2D(_MainTex, i.uv);
+				return i.color;
 			}
 			ENDCG
 		}

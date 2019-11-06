@@ -1,6 +1,8 @@
 #define THREADS 128
 #define D 1.1283791671
 #define R 0.5641895836
+#define MAX_MOTION 10
+#define MOTION_COEFFICIENT 0.01
 
 //the constants used for calculate cellID of particles AKA hash values
 float HashScale;
@@ -21,6 +23,7 @@ RWStructuredBuffer<float2> PositionsWRITE;
 StructuredBuffer<float2> VelocitiesREAD;
 RWStructuredBuffer<float2> VelocitiesWRITE;
 RWStructuredBuffer<float2> Lifetimes;
+RWStructuredBuffer<float> Motions;
 AppendStructuredBuffer<uint> Dead;
 ConsumeStructuredBuffer<uint> Pool;
 AppendStructuredBuffer<uint> Alive;
@@ -61,6 +64,7 @@ void EmitIndirect (uint id : SV_DispatchThreadID)
         PositionsWRITE[idx] = upload.xy;
         VelocitiesWRITE[idx] = upload.zw;
         Lifetimes[idx] = float2(0, Lifetime);
+        Motions[idx] = MAX_MOTION;
 	}
 }
 
@@ -79,7 +83,9 @@ void Update(uint id : SV_DispatchThreadID)
         Dead.Append(id);
     } else {
         Alive.Append(id);
-        float2 velocity = Damping * (VelocitiesREAD[id] + Gravity * DT);
+        float2 oldVelocity = VelocitiesREAD[id];
+        Motions[id] = lerp(Motions[id], min(MAX_MOTION, dot(oldVelocity, oldVelocity)), MOTION_COEFFICIENT);
+        float2 velocity = Damping * (oldVelocity + Gravity * DT);
         float speed = length(velocity);
         float maxSpeed = 0.7 / DT;
         if (speed > maxSpeed) {
