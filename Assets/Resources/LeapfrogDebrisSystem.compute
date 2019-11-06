@@ -189,8 +189,8 @@ void SolveCollisions(uint id : SV_DispatchThreadID)
             float2 velocity_n = velocityAlongNormal * normal;
             float2 velocity_t = velocity - velocity_n;
             float t_length = length(velocity_t);
-            float b = 1 - max((t_length - 0.6 * length(velocity_n)) / max(0.001, t_length), 0);
-            velocity -= velocity_n + b * velocity_t;
+            float b = 1 - max((t_length - 0.3 * length(velocity_n)) / max(0.001, t_length), 0);
+            velocity -= (2 - b) * velocity_n + b * velocity_t;
         }
     }
     PositionsWRITE[id] = predicted;
