@@ -63,8 +63,8 @@ Shader "CaveRoyale/Voronoi" {
 
             //Fragment Shader
             half4 frag (v2f_img i) : COLOR {
-                fixed value = tex2D (_MainTex, i.uv);
-                if (value == 0) {
+                fixed4 value = tex2D (_MainTex, i.uv);
+                if (value.a == 0) {
                     return half4(0,0, i.uv);
                 } else {
                     return half4(i.uv, 0, 0);

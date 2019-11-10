@@ -22,9 +22,9 @@ void DestroyTerrain (uint3 id : SV_DispatchThreadID)
         float2 v = pos - e.xy;
         float r2 = dot(v, v);
         if (r2 < e.z) {
-            if (terrain[id.xy].x > 0) {
+            if (terrain[id.xy].a > 0) {
                 terrain[id.xy] = float4(0, 0, 0, 0);
-                emitDebris.Append(float4(pos, 0, 0));//1000 / e.z * v));
+                emitDebris.Append(float4(pos, 1000 / e.z * v));
             }
         }
     }

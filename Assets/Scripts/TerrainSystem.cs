@@ -91,7 +91,7 @@ public class TerrainSystem : MonoBehaviour {
 		Shader.SetGlobalFloat("_TerrainDistanceFieldMultiplier", terrainDistanceFieldMultiplier);
 		Shader.SetGlobalVector("_TerrainDistanceFieldScale", terrainDistanceFieldScale);
 		Shader.SetGlobalTexture("_TerrainDistanceField", terrainDistanceField);
-		material = new Material(Shader.Find("CaveRoyale/DistanceFieldDebug"));
+		material = new Material(Shader.Find("CaveRoyale/TerrainDebug"));
 		MeshRenderer renderer = GetComponent<MeshRenderer>();
 		renderer.material = material;
 		voronoiMaterial = new Material(Shader.Find("CaveRoyale/Voronoi"));
@@ -120,11 +120,12 @@ public class TerrainSystem : MonoBehaviour {
 	private void Update() {
 		if (!terrain) {
 			Debug.Log("Create terrain");
-			terrain = new RenderTexture(width, height, 0, RenderTextureFormat.R8, RenderTextureReadWrite.Linear);
+			terrain = new RenderTexture(width, height, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear);
 			terrain.filterMode = FilterMode.Point;
 			terrain.enableRandomWrite = true;
 			terrain.Create();
 			Graphics.Blit(terrain, terrain, terrainMaterial);
+			Shader.SetGlobalTexture("_Terrain", terrain);
 		}
 
 		if (debrisSystem == null) {

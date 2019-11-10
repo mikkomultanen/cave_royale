@@ -91,7 +91,10 @@
                 float v = snoise(float3(i.uv * 10, _Seed + 1));
                 float b = step(_Threshold, n + _ThresholdAmplitude * v);
                 clip(0.5 - b);
-                return float4(1,1,1,1);
+                float nc = snoise(float3(i.uv * 20, _Seed + 2));
+                float4 c = 0.2 * (0.5 * nc + 0.5) * float4(1,1,1,1) + 0.1;
+                c.a = 1;
+                return c;
             }
             ENDCG
         }
