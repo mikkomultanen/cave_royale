@@ -28,10 +28,11 @@ RWStructuredBuffer<float> Motions;
 AppendStructuredBuffer<uint> Dead;
 ConsumeStructuredBuffer<uint> Pool;
 AppendStructuredBuffer<uint> Alive;
-AppendStructuredBuffer<float2> Burn;
+AppendStructuredBuffer<uint> AddTerrainAPPEND;
 StructuredBuffer<uint> Counter;
 StructuredBuffer<uint> UploadCounter;
 StructuredBuffer<float4> Uploads;
+StructuredBuffer<uint> AddTerrainREAD;
 
 uint Width;
 uint CounterOffset;
@@ -45,6 +46,9 @@ Texture2D<float3> _TerrainDistanceField;
 SamplerState sampler_TerrainDistanceField;
 float4 _TerrainDistanceFieldScale; // x = 1 / width, y = 1 / height, z = width, w = height
 float _TerrainDistanceFieldMultiplier;
+
+RWTexture2D<float4> _Terrain;
+float2 _TerrainSize;
 
 #pragma kernel Init
 [numthreads(THREADS,1,1)]
@@ -83,7 +87,7 @@ void Update(uint id : SV_DispatchThreadID)
     float2 oldPosition = PositionsREAD[id];
     if (motion < MOTION_THRESHOLD) {
         lifetime.x = lifetime.y;
-        Burn.Append(oldPosition);
+        AddTerrainAPPEND.Append(id);
     }
 
     lifetime.x += DT;
@@ -195,4 +199,17 @@ void SolveCollisions(uint id : SV_DispatchThreadID)
     }
     PositionsWRITE[id] = predicted;
     VelocitiesWRITE[id] = velocity;
+}
+
+#pragma kernel AddTerrain
+[numthreads(THREADS,1,1)]
+void AddTerrain(uint id : SV_DispatchThreadID)
+{
+    if (id >= Counter[CounterOffset])
+        return;
+
+    uint idx = AddTerrainREAD[id];
+    float2 position = PositionsREAD[idx];
+    uint2 index = clamp(floor(position + 0.5 * _TerrainSize), int2(0, 0), _TerrainSize);
+    _Terrain[index] = float4(1, 1, 1, 1);
 }

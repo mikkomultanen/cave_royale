@@ -26,7 +26,6 @@ public class TerrainSystem : MonoBehaviour {
 	private uint destroyTerrainKernelY;
 	private ComputeBuffer explosionsBuffer;
 	private ComputeBuffer emitDebrisBuffer;
-	private ComputeBuffer counter;
 	private List<Vector4> explosionsList = new List<Vector4>();
 	private DebrisSystem debrisSystem;
 
@@ -106,8 +105,6 @@ public class TerrainSystem : MonoBehaviour {
 		explosionsBuffer = new ComputeBuffer(16, Marshal.SizeOf(typeof(Vector4)), ComputeBufferType.Default);
 		emitDebrisBuffer = new ComputeBuffer(16384, Marshal.SizeOf(typeof(Vector4)), ComputeBufferType.Append);
 		emitDebrisBuffer.SetCounterValue(0);
-		counter = new ComputeBuffer(4, Marshal.SizeOf(typeof(uint)), ComputeBufferType.IndirectArguments);
-		counter.SetData(new int[] { 0, 1, 0, 0 });
 	}
 
 	private void Start() {
@@ -126,6 +123,7 @@ public class TerrainSystem : MonoBehaviour {
 			terrain = new RenderTexture(width, height, 0, RenderTextureFormat.R8, RenderTextureReadWrite.Linear);
 			terrain.filterMode = FilterMode.Point;
 			terrain.enableRandomWrite = true;
+			terrain.Create();
 			Graphics.Blit(terrain, terrain, terrainMaterial);
 		}
 
@@ -191,7 +189,6 @@ public class TerrainSystem : MonoBehaviour {
 		DestroyImmediate(voronoiMaterial);
 		ComputeUtilities.Release(ref explosionsBuffer);
 		ComputeUtilities.Release(ref emitDebrisBuffer);
-		ComputeUtilities.Release(ref counter);
 		if (debrisSystem != null) {
 			debrisSystem.Dispose();
 			debrisSystem = null;
@@ -211,23 +208,5 @@ public class TerrainSystem : MonoBehaviour {
 		if (debrisSystem != null) {
 			debrisSystem.Emit(position, Vector2.zero);
 		}
-	}
-
-	public void AddTerrainIndirect(ComputeBuffer positions)
-	{
-		int emitKernel = computeShader.FindKernel("AddTerrainIndirect");
-		ComputeBuffer.CopyCount(positions, counter, 0);
-		computeShader.SetInt("CounterOffset", 0);
-		computeShader.SetTexture(emitKernel, "terrain", terrain);
-		computeShader.SetBuffer(emitKernel, "Counter", counter);
-		computeShader.SetBuffer(emitKernel, "Positions", positions);
-		computeShader.Dispatch(emitKernel, Groups(positions.count), 1, 1);
-	}
-
-	private int Groups(int count)
-	{
-		int groups = count / THREADS;
-		if (count % THREADS != 0) groups++;
-		return groups;
 	}
 }

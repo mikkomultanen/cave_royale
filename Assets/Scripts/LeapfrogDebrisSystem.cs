@@ -30,7 +30,7 @@ namespace CaveRoyale {
         private ComputeBuffer aliveBuffer;
 
         // Particles which should be added to terrain
-        private ComputeBuffer burnBuffer;
+        private ComputeBuffer addTerrainBuffer;
 
         // Size of the pool buffer
         private ComputeBuffer counter;
@@ -67,8 +67,8 @@ namespace CaveRoyale {
             deadBuffer.SetCounterValue(0);
             aliveBuffer = new ComputeBuffer(maxNumParticles, Marshal.SizeOf(typeof(uint)), ComputeBufferType.Append);
             aliveBuffer.SetCounterValue(0);
-            burnBuffer = new ComputeBuffer(maxNumParticles, Marshal.SizeOf(typeof(Vector2)), ComputeBufferType.Append);
-            burnBuffer.SetCounterValue(0);
+            addTerrainBuffer = new ComputeBuffer(maxNumParticles, Marshal.SizeOf(typeof(Vector2)), ComputeBufferType.Append);
+            addTerrainBuffer.SetCounterValue(0);
 
             counter = new ComputeBuffer(4, Marshal.SizeOf(typeof(uint)), ComputeBufferType.IndirectArguments);
             counter.SetData(new int[] { 0, 1, 0, 0 });
@@ -88,6 +88,7 @@ namespace CaveRoyale {
             computeShader.SetFloat("Damping", 0.99f);
     		computeShader.SetVector("_TerrainDistanceFieldScale", terrainSystem.terrainDistanceFieldScale);
             computeShader.SetFloat("_TerrainDistanceFieldMultiplier", terrainSystem.terrainDistanceFieldMultiplier);
+            computeShader.SetVector("_TerrainSize", new Vector2(terrainSystem.width, terrainSystem.height));
 
             int initKernel = computeShader.FindKernel("Init");
             computeShader.SetInt("Width", maxNumParticles);
@@ -112,7 +113,7 @@ namespace CaveRoyale {
                     DispatchSolveCollisions();
                 }
             }
-            terrainSystem.AddTerrainIndirect(burnBuffer);
+            DispatchAddTerrain();
 
             Render();
         }
@@ -140,13 +141,13 @@ namespace CaveRoyale {
         {
             int updateKernel = computeShader.FindKernel("Update");
     		aliveBuffer.SetCounterValue(0);
-            burnBuffer.SetCounterValue(0);
+            addTerrainBuffer.SetCounterValue(0);
             computeShader.SetInt("Width", lifetimesBuffer.count);
             computeShader.SetBuffer(updateKernel, "Lifetimes", lifetimesBuffer);
             computeShader.SetBuffer(updateKernel, "Motions", motionsBuffer);
             computeShader.SetBuffer(updateKernel, "Dead", deadBuffer);
             computeShader.SetBuffer(updateKernel, "Alive", aliveBuffer);
-            computeShader.SetBuffer(updateKernel, "Burn", burnBuffer);
+            computeShader.SetBuffer(updateKernel, "AddTerrainAPPEND", addTerrainBuffer);
             computeShader.SetBuffer(updateKernel, "PositionsREAD", positionsBuffers[READ]);
             computeShader.SetBuffer(updateKernel, "VelocitiesREAD", velocitiesBuffers[READ]);
             computeShader.SetBuffer(updateKernel, "PositionsWRITE", positionsBuffers[WRITE]);
@@ -170,6 +171,18 @@ namespace CaveRoyale {
             computeShader.Dispatch(solveConstraintsKernel, Groups(lifetimesBuffer.count), 1, 1);
             ComputeUtilities.Swap(positionsBuffers);
             ComputeUtilities.Swap(velocitiesBuffers);
+        }
+
+        private void DispatchAddTerrain()
+        {
+            int addTerrainKernel = computeShader.FindKernel("AddTerrain");
+            ComputeBuffer.CopyCount(addTerrainBuffer, counter, 0);
+            computeShader.SetInt("CounterOffset", 0);
+            computeShader.SetTexture(addTerrainKernel, "_Terrain", terrainSystem.terrain);
+            computeShader.SetBuffer(addTerrainKernel, "Counter", counter);
+            computeShader.SetBuffer(addTerrainKernel, "AddTerrainREAD", addTerrainBuffer);
+		    computeShader.SetBuffer(addTerrainKernel, "PositionsREAD", positionsBuffers[READ]);
+            computeShader.Dispatch(addTerrainKernel, Groups(addTerrainBuffer.count), 1, 1);
         }
 
         private void Render()
