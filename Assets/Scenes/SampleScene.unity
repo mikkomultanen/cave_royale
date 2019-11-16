@@ -341,7 +341,7 @@ Camera:
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
-    m_Bits: 4294967295
+    m_Bits: 1
   m_RenderingPath: 1
   m_TargetTexture: {fileID: 0}
   m_TargetDisplay: 0
@@ -446,7 +446,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 1812488304}
+  - {fileID: 1656227406}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -475,7 +475,7 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1569559392}
   m_Mesh: {fileID: 947789466}
---- !u!21 &1812488304
+--- !u!21 &1656227406
 Material:
   serializedVersion: 6
   m_ObjectHideFlags: 0

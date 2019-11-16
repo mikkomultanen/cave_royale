@@ -123,6 +123,7 @@ public class TerrainSystem : MonoBehaviour {
 			terrain = new RenderTexture(width, height, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear);
 			terrain.filterMode = FilterMode.Point;
 			terrain.enableRandomWrite = true;
+			terrain.hideFlags = HideFlags.DontSave;
 			terrain.Create();
 			Graphics.Blit(terrain, terrain, terrainMaterial);
 			Shader.SetGlobalTexture("_Terrain", terrain);

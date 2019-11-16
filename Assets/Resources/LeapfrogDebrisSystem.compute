@@ -1,8 +1,8 @@
 #define THREADS 128
 #define D 1.1283791671
-#define R 0.5641895836
+#define R 0.3716208329
 #define MAX_MOTION 10
-#define MOTION_COEFFICIENT 0.1
+#define MOTION_COEFFICIENT 0.05
 #define MOTION_THRESHOLD 1
 
 //the constants used for calculate cellID of particles AKA hash values
@@ -39,6 +39,7 @@ uint CounterOffset;
 uint UploadCounterOffset;
 float Lifetime;
 float DT;
+float LifetimeDT;
 float2 Gravity;
 float Damping;
 
@@ -74,39 +75,25 @@ void EmitIndirect (uint id : SV_DispatchThreadID)
 	}
 }
 
-#pragma kernel Update
+#pragma kernel UpdatePositionAndVelocity
 [numthreads(THREADS,1,1)]
-void Update(uint id : SV_DispatchThreadID)
+void UpdatePositionAndVelocity(uint id : SV_DispatchThreadID)
 {
     if (id >= Width) return;
 
     float2 lifetime = Lifetimes[id];
     if (lifetime.x > lifetime.y) return;
 
-    float motion = Motions[id];
-    float2 oldPosition = PositionsREAD[id];
-    if (motion < MOTION_THRESHOLD) {
-        lifetime.x = lifetime.y;
-        AddTerrainAPPEND.Append(id);
+    float2 oldVelocity = VelocitiesREAD[id];
+    Motions[id] = lerp(Motions[id], min(MAX_MOTION, dot(oldVelocity, oldVelocity)), MOTION_COEFFICIENT);
+    float2 velocity = Damping * (oldVelocity + Gravity * DT);
+    float speed = length(velocity);
+    float maxSpeed = 0.7 / DT;
+    if (speed > maxSpeed) {
+        velocity *= maxSpeed / speed;
     }
-
-    lifetime.x += DT;
-    Lifetimes[id] = lifetime;
-    if (lifetime.x > lifetime.y) {
-        Dead.Append(id);
-    } else {
-        Alive.Append(id);
-        float2 oldVelocity = VelocitiesREAD[id];
-        Motions[id] = lerp(Motions[id], min(MAX_MOTION, dot(oldVelocity, oldVelocity)), MOTION_COEFFICIENT);
-        float2 velocity = Damping * (oldVelocity + Gravity * DT);
-        float speed = length(velocity);
-        float maxSpeed = 0.7 / DT;
-        if (speed > maxSpeed) {
-            velocity *= maxSpeed / speed;
-        }
-        VelocitiesWRITE[id] = velocity;
-        PositionsWRITE[id] = oldPosition + velocity * DT; 
-    }
+    VelocitiesWRITE[id] = velocity;
+    PositionsWRITE[id] = PositionsREAD[id] + velocity * DT; 
 }
 
 #define LOOP_START \
@@ -169,8 +156,8 @@ void SolveCollisions(uint id : SV_DispatchThreadID)
             if (velocityAlongNormal < 0) {
                 float2 velocity_n = velocityAlongNormal * normal;
                 float2 velocity_t = velocity - velocity_n;
-                float t_length = length(velocity_t);
-                float b = 1 - max((t_length + 0.2 * velocityAlongNormal) / max(0.001, t_length), 0);
+                float t_length = max(0.001, length(velocity_t));
+                float b = 1 - max((t_length + 0.2 * velocityAlongNormal) / t_length, 0);
                 velocityCorrection -= 0.5 * (velocity_n + b * velocity_t);
             }
         }
@@ -193,12 +180,36 @@ void SolveCollisions(uint id : SV_DispatchThreadID)
             float2 velocity_n = velocityAlongNormal * normal;
             float2 velocity_t = velocity - velocity_n;
             float t_length = length(velocity_t);
-            float b = 1 - max((t_length - 0.3 * length(velocity_n)) / max(0.001, t_length), 0);
+            float b = 1 - max((t_length - 0.2 * length(velocity_n)) / max(0.001, t_length), 0);
             velocity -= (2 - b) * velocity_n + b * velocity_t;
         }
     }
     PositionsWRITE[id] = predicted;
     VelocitiesWRITE[id] = velocity;
+}
+
+#pragma kernel Update
+[numthreads(THREADS,1,1)]
+void Update(uint id : SV_DispatchThreadID)
+{
+    if (id >= Width) return;
+
+    float2 lifetime = Lifetimes[id];
+    if (lifetime.x > lifetime.y) return;
+
+    float motion = Motions[id];
+    if (motion < MOTION_THRESHOLD) {
+        lifetime.x = lifetime.y;
+        AddTerrainAPPEND.Append(id);
+    }
+
+    lifetime.x += LifetimeDT;
+    Lifetimes[id] = lifetime;
+    if (lifetime.x > lifetime.y) {
+        Dead.Append(id);
+    } else {
+        Alive.Append(id);
+    }
 }
 
 #pragma kernel AddTerrain

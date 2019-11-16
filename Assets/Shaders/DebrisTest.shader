@@ -61,7 +61,7 @@ Shader "Unlit/DebrisTest"
 			
 			fixed4 frag (v2f i) : SV_Target
 			{
-				clip(0.5 - length(i.uv - 0.5));
+				//clip(0.5 - length(i.uv - 0.5));
 				return i.color;
 			}
 			ENDCG

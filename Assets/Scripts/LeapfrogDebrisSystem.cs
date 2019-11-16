@@ -105,14 +105,19 @@ namespace CaveRoyale {
         public void Update()
         {
             nextFrameTime += Time.deltaTime;
+            float lifetimeTimestep = 0;
             for (int j = 0; j < maxIterations && nextFrameTime > timestep; j++) {
                 nextFrameTime -= timestep;
-                DispatchUpdate();
+                lifetimeTimestep += timestep;
+                DispatchUpdatePositionAndVelocity();
                 hash.Process(positionsBuffers[READ], lifetimesBuffer);
                 for (int i = 0; i < 4; i++) {
                     DispatchSolveCollisions();
                 }
             }
+
+            DispatchUpdate(lifetimeTimestep);
+
             DispatchAddTerrain();
 
             Render();
@@ -137,17 +142,12 @@ namespace CaveRoyale {
             computeShader.Dispatch(emitKernel, Groups(uploads.count), 1, 1);
         }
 
-        private void DispatchUpdate()
+        private void DispatchUpdatePositionAndVelocity()
         {
-            int updateKernel = computeShader.FindKernel("Update");
-    		aliveBuffer.SetCounterValue(0);
-            addTerrainBuffer.SetCounterValue(0);
+            int updateKernel = computeShader.FindKernel("UpdatePositionAndVelocity");
             computeShader.SetInt("Width", lifetimesBuffer.count);
             computeShader.SetBuffer(updateKernel, "Lifetimes", lifetimesBuffer);
             computeShader.SetBuffer(updateKernel, "Motions", motionsBuffer);
-            computeShader.SetBuffer(updateKernel, "Dead", deadBuffer);
-            computeShader.SetBuffer(updateKernel, "Alive", aliveBuffer);
-            computeShader.SetBuffer(updateKernel, "AddTerrainAPPEND", addTerrainBuffer);
             computeShader.SetBuffer(updateKernel, "PositionsREAD", positionsBuffers[READ]);
             computeShader.SetBuffer(updateKernel, "VelocitiesREAD", velocitiesBuffers[READ]);
             computeShader.SetBuffer(updateKernel, "PositionsWRITE", positionsBuffers[WRITE]);
@@ -171,6 +171,21 @@ namespace CaveRoyale {
             computeShader.Dispatch(solveConstraintsKernel, Groups(lifetimesBuffer.count), 1, 1);
             ComputeUtilities.Swap(positionsBuffers);
             ComputeUtilities.Swap(velocitiesBuffers);
+        }
+
+        private void DispatchUpdate(float lifetimeTimestep)
+        {
+            int updateKernel = computeShader.FindKernel("Update");
+    		aliveBuffer.SetCounterValue(0);
+            addTerrainBuffer.SetCounterValue(0);
+            computeShader.SetFloat("LifetimeDT", lifetimeTimestep);
+            computeShader.SetInt("Width", lifetimesBuffer.count);
+            computeShader.SetBuffer(updateKernel, "Lifetimes", lifetimesBuffer);
+            computeShader.SetBuffer(updateKernel, "Motions", motionsBuffer);
+            computeShader.SetBuffer(updateKernel, "Dead", deadBuffer);
+            computeShader.SetBuffer(updateKernel, "Alive", aliveBuffer);
+            computeShader.SetBuffer(updateKernel, "AddTerrainAPPEND", addTerrainBuffer);
+            computeShader.Dispatch(updateKernel, Groups(lifetimesBuffer.count), 1, 1);
         }
 
         private void DispatchAddTerrain()
