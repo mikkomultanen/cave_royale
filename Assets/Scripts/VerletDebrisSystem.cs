@@ -120,6 +120,11 @@ namespace CaveRoyale {
             computeShader.Dispatch(emitKernel, Groups(uploads.count), 1, 1);
         }
 
+        public void DispatchDestroyTerrain()
+        {
+
+        }
+
         private void DispatchEmit()
         {
             if (emitList.Count > 0) {
@@ -186,6 +191,11 @@ namespace CaveRoyale {
 		    material.SetBuffer("_Positions", positionsBuffer);
 		    material.SetBuffer("_Alive", aliveBuffer);
             Graphics.DrawMeshInstancedIndirect(mesh, 0, material, bounds, argsBuffer, 0);
+        }
+
+        public void EmitExplosion(Vector2 position, float radius)
+        {
+            
         }
 
         public void Emit(Vector2 position, Vector2 velocity) {

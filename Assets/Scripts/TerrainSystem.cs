@@ -20,13 +20,6 @@ public class TerrainSystem : MonoBehaviour {
 	public Material debrisMaterial;
 	private Material material;
 	private Material voronoiMaterial;
-	private ComputeShader computeShader;
-	private int destroyTerrainKernel;
-	private uint destroyTerrainKernelX;
-	private uint destroyTerrainKernelY;
-	private ComputeBuffer explosionsBuffer;
-	private ComputeBuffer emitDebrisBuffer;
-	private List<Vector4> explosionsList = new List<Vector4>();
 	private DebrisSystem debrisSystem;
 
     private void Awake()
@@ -95,16 +88,6 @@ public class TerrainSystem : MonoBehaviour {
 		MeshRenderer renderer = GetComponent<MeshRenderer>();
 		renderer.material = material;
 		voronoiMaterial = new Material(Shader.Find("CaveRoyale/Voronoi"));
-
-		computeShader = (ComputeShader)Resources.Load("UpdateTerrain");
-		computeShader.SetInt("Width", width);
-		computeShader.SetInt("Height", height);
-		destroyTerrainKernel = computeShader.FindKernel("DestroyTerrain");
-		uint z;
-		computeShader.GetKernelThreadGroupSizes(destroyTerrainKernel, out destroyTerrainKernelX, out destroyTerrainKernelY, out z);
-		explosionsBuffer = new ComputeBuffer(16, Marshal.SizeOf(typeof(Vector4)), ComputeBufferType.Default);
-		emitDebrisBuffer = new ComputeBuffer(16384, Marshal.SizeOf(typeof(Vector4)), ComputeBufferType.Append);
-		emitDebrisBuffer.SetCounterValue(0);
 	}
 
 	private void Start() {
@@ -134,19 +117,7 @@ public class TerrainSystem : MonoBehaviour {
 			//debrisSystem = new VerletDebrisSystem(65536, 1/120f, 3, debrisMaterial, new Bounds(Vector3.zero, new Vector3(width, height, 100)), this);
 		}
 
-		if (explosionsList.Count > 0) {
-			explosionsBuffer.SetData(explosionsList);
-			computeShader.SetInt("_Count", explosionsList.Count);
-			computeShader.SetTexture(destroyTerrainKernel, "terrain", terrain);
-			computeShader.SetBuffer(destroyTerrainKernel, "explosions", explosionsBuffer);
-			emitDebrisBuffer.SetCounterValue(0);
-			computeShader.SetBuffer(destroyTerrainKernel, "emitDebris", emitDebrisBuffer);
-			int x = terrain.width / (int)destroyTerrainKernelX;
-			int y = terrain.height / (int)destroyTerrainKernelY;
-			computeShader.Dispatch(destroyTerrainKernel, x, y, 1);
-			explosionsList.Clear();
-			debrisSystem.DispatchEmitIndirect(emitDebrisBuffer);
-		}
+		debrisSystem.DispatchDestroyTerrain();
 
 		UpdateTerrainDistanceField();
 
@@ -189,8 +160,6 @@ public class TerrainSystem : MonoBehaviour {
 		DestroyImmediate(terrainDistanceField);
 		DestroyImmediate(material);
 		DestroyImmediate(voronoiMaterial);
-		ComputeUtilities.Release(ref explosionsBuffer);
-		ComputeUtilities.Release(ref emitDebrisBuffer);
 		if (debrisSystem != null) {
 			debrisSystem.Dispose();
 			debrisSystem = null;
@@ -198,10 +167,8 @@ public class TerrainSystem : MonoBehaviour {
 	}
 
 	public void EmitExplosion(Vector2 position, float radius) {
-		if (explosionsList.Count < explosionsBuffer.count) {
-			Vector4 e = position;
-			e.z = radius * radius;
-			explosionsList.Add(e);
+		if (debrisSystem != null) {
+			debrisSystem.EmitExplosion(position, radius);
 		}
 	}
 

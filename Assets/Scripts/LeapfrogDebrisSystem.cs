@@ -8,6 +8,7 @@ namespace CaveRoyale {
     {
         //group size
         private const int THREADS = 128;
+        private const int THREADS_TERRAIN = 8;
         //Macros
         private const int READ = 0;
         private const int WRITE = 1;
@@ -17,6 +18,8 @@ namespace CaveRoyale {
         private Bounds bounds;
         private TerrainSystem terrainSystem;
         private float nextFrameTime = 0;
+	    private List<Vector4> explosionsList = new List<Vector4>();
+        private ComputeBuffer explosionsBuffer;
         // Particle data
         private ComputeBuffer[] positionsBuffers;
         private ComputeBuffer[] velocitiesBuffers;
@@ -53,6 +56,8 @@ namespace CaveRoyale {
             this.material = material;
             this.bounds = bounds;
             this.terrainSystem = terrainSystem;
+
+    		explosionsBuffer = new ComputeBuffer(16, Marshal.SizeOf(typeof(Vector4)), ComputeBufferType.Default);
 
             positionsBuffers = new ComputeBuffer[2];
             positionsBuffers[0] = new ComputeBuffer(maxNumParticles, Marshal.SizeOf(typeof(Vector2)));
@@ -142,6 +147,42 @@ namespace CaveRoyale {
             computeShader.Dispatch(emitKernel, Groups(uploads.count), 1, 1);
         }
 
+        public void EmitExplosion(Vector2 position, float radius) {
+            if (explosionsList.Count < explosionsBuffer.count) {
+                Vector4 e = position;
+                e.z = radius * radius;
+                e.w = radius;
+                explosionsList.Add(e);
+            }
+        }
+
+        public void DispatchDestroyTerrain()
+        {
+            if (explosionsList.Count > 0) {
+                int destroyTerrainKernel = computeShader.FindKernel("DestroyTerrain");
+                int width = terrainSystem.terrain.width;
+                int height = terrainSystem.terrain.height;
+                explosionsBuffer.SetData(explosionsList);
+                ComputeBuffer.CopyCount(deadBuffer, counter, 0);
+                computeShader.SetInt("Count", explosionsList.Count);
+                computeShader.SetInt("Width", width);
+                computeShader.SetInt("Height", height);
+                computeShader.SetInt("CounterOffset", 0);
+                computeShader.SetFloat("Lifetime", 1000);
+                computeShader.SetTexture(destroyTerrainKernel, "_Terrain", terrainSystem.terrain);
+                computeShader.SetBuffer(destroyTerrainKernel, "Explosions", explosionsBuffer);
+                computeShader.SetBuffer(destroyTerrainKernel, "Counter", counter);
+                computeShader.SetBuffer(destroyTerrainKernel, "Pool", deadBuffer);
+                computeShader.SetBuffer(destroyTerrainKernel, "PositionsWRITE", positionsBuffers[READ]);
+                computeShader.SetBuffer(destroyTerrainKernel, "VelocitiesWRITE", velocitiesBuffers[READ]);
+                computeShader.SetBuffer(destroyTerrainKernel, "Lifetimes", lifetimesBuffer);
+                computeShader.SetBuffer(destroyTerrainKernel, "Motions", motionsBuffer);
+
+                computeShader.Dispatch(destroyTerrainKernel, GroupsTerrain(width), GroupsTerrain(height), 1);
+                explosionsList.Clear();
+            }
+        }
+
         private void DispatchUpdatePositionAndVelocity()
         {
             int updateKernel = computeShader.FindKernel("UpdatePositionAndVelocity");
@@ -219,8 +260,16 @@ namespace CaveRoyale {
             return groups;
         }
 
+        private int GroupsTerrain(int count)
+        {
+            int groups = count / THREADS_TERRAIN;
+            if (count % THREADS_TERRAIN != 0) groups++;
+            return groups;
+        }
+
         public void Dispose()
         {
+            ComputeUtilities.Release(ref explosionsBuffer);
             ComputeUtilities.Release(positionsBuffers);
             ComputeUtilities.Release(velocitiesBuffers);
             ComputeUtilities.Release(ref lifetimesBuffer);

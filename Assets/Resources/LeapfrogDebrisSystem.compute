@@ -29,12 +29,15 @@ AppendStructuredBuffer<uint> Dead;
 ConsumeStructuredBuffer<uint> Pool;
 AppendStructuredBuffer<uint> Alive;
 AppendStructuredBuffer<uint> AddTerrainAPPEND;
-StructuredBuffer<uint> Counter;
+RWStructuredBuffer<uint> Counter;
 StructuredBuffer<uint> UploadCounter;
 StructuredBuffer<float4> Uploads;
+StructuredBuffer<float4> Explosions;
 StructuredBuffer<uint> AddTerrainREAD;
 
 uint Width;
+uint Height;
+uint Count;
 uint CounterOffset;
 uint UploadCounterOffset;
 float Lifetime;
@@ -73,6 +76,37 @@ void EmitIndirect (uint id : SV_DispatchThreadID)
         Lifetimes[idx] = float2(0, Lifetime);
         Motions[idx] = MAX_MOTION;
 	}
+}
+
+#pragma kernel DestroyTerrain
+[numthreads(8,8,1)]
+void DestroyTerrain (uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= Width || id.y >= Height)
+        return;
+
+    const float2 pos = id.xy - 0.5 * _TerrainSize + 0.5;
+
+    for (uint i = 0; i < Count; i++) {
+        float4 e = Explosions[i];
+        float2 v = pos - e.xy;
+        float r2 = dot(v, v);
+        if (r2 < e.z) {
+            if (_Terrain[id.xy].a > 0) {
+                _Terrain[id.xy] = float4(0, 0, 0, 0);
+                // TODO check counter atomically
+                //uint prevPoolCount;
+                //InterlockedAdd(Counter[CounterOffset], -1, prevPoolCount);
+                if (Counter[CounterOffset] > 1024) {
+                    uint idx = Pool.Consume();
+                    PositionsWRITE[idx] = pos;
+                    VelocitiesWRITE[idx] = float2(0, 0);
+                    Lifetimes[idx] = float2(0, Lifetime);
+                    Motions[idx] = MAX_MOTION;
+                }
+            }
+        }
+    }
 }
 
 #pragma kernel UpdatePositionAndVelocity
