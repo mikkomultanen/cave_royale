@@ -25,6 +25,7 @@ namespace CaveRoyale {
         private ComputeBuffer[] velocitiesBuffers;
         private ComputeBuffer lifetimesBuffer;
         private ComputeBuffer motionsBuffer;
+        private ComputeBuffer colorsBuffer;
 
         // Particle pool
         private ComputeBuffer deadBuffer;
@@ -67,6 +68,7 @@ namespace CaveRoyale {
             velocitiesBuffers[1] = new ComputeBuffer(maxNumParticles, Marshal.SizeOf(typeof(Vector2)));
             lifetimesBuffer = new ComputeBuffer(maxNumParticles, Marshal.SizeOf(typeof(Vector2)));
             motionsBuffer = new ComputeBuffer(maxNumParticles, Marshal.SizeOf(typeof(float)));
+            colorsBuffer = new ComputeBuffer(maxNumParticles, Marshal.SizeOf(typeof(Vector4)));
 
             deadBuffer = new ComputeBuffer(maxNumParticles, Marshal.SizeOf(typeof(uint)), ComputeBufferType.Append);
             deadBuffer.SetCounterValue(0);
@@ -177,6 +179,7 @@ namespace CaveRoyale {
                 computeShader.SetBuffer(destroyTerrainKernel, "VelocitiesWRITE", velocitiesBuffers[READ]);
                 computeShader.SetBuffer(destroyTerrainKernel, "Lifetimes", lifetimesBuffer);
                 computeShader.SetBuffer(destroyTerrainKernel, "Motions", motionsBuffer);
+                computeShader.SetBuffer(destroyTerrainKernel, "Colors", colorsBuffer);
 
                 computeShader.Dispatch(destroyTerrainKernel, GroupsTerrain(width), GroupsTerrain(height), 1);
                 explosionsList.Clear();
@@ -238,6 +241,7 @@ namespace CaveRoyale {
             computeShader.SetBuffer(addTerrainKernel, "Counter", counter);
             computeShader.SetBuffer(addTerrainKernel, "AddTerrainREAD", addTerrainBuffer);
 		    computeShader.SetBuffer(addTerrainKernel, "PositionsREAD", positionsBuffers[READ]);
+		    computeShader.SetBuffer(addTerrainKernel, "Colors", colorsBuffer);
             computeShader.Dispatch(addTerrainKernel, Groups(addTerrainBuffer.count), 1, 1);
         }
 
@@ -247,6 +251,7 @@ namespace CaveRoyale {
 		    material.SetBuffer("_Positions", positionsBuffers[READ]);
 		    material.SetBuffer("_Alive", aliveBuffer);
             material.SetBuffer("_Motions", motionsBuffer);
+            material.SetBuffer("_Colors", colorsBuffer);
             Graphics.DrawMeshInstancedIndirect(mesh, 0, material, bounds, argsBuffer, 0);
         }
 
@@ -274,6 +279,7 @@ namespace CaveRoyale {
             ComputeUtilities.Release(velocitiesBuffers);
             ComputeUtilities.Release(ref lifetimesBuffer);
             ComputeUtilities.Release(ref motionsBuffer);
+            ComputeUtilities.Release(ref colorsBuffer);
             ComputeUtilities.Release(ref deadBuffer);
             ComputeUtilities.Release(ref aliveBuffer);
             ComputeUtilities.Release(ref counter);

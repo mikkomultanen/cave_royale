@@ -25,6 +25,7 @@ StructuredBuffer<float2> VelocitiesREAD;
 RWStructuredBuffer<float2> VelocitiesWRITE;
 RWStructuredBuffer<float2> Lifetimes;
 RWStructuredBuffer<float> Motions;
+RWStructuredBuffer<float4> Colors;
 AppendStructuredBuffer<uint> Dead;
 ConsumeStructuredBuffer<uint> Pool;
 AppendStructuredBuffer<uint> Alive;
@@ -92,7 +93,8 @@ void DestroyTerrain (uint3 id : SV_DispatchThreadID)
         float2 v = pos - e.xy;
         float r2 = dot(v, v);
         if (r2 < e.z) {
-            if (_Terrain[id.xy].a > 0) {
+            float4 color = _Terrain[id.xy];
+            if (color.a > 0) {
                 _Terrain[id.xy] = float4(0, 0, 0, 0);
                 // TODO check counter atomically
                 //uint prevPoolCount;
@@ -103,6 +105,7 @@ void DestroyTerrain (uint3 id : SV_DispatchThreadID)
                     VelocitiesWRITE[idx] = float2(0, 0);
                     Lifetimes[idx] = float2(0, Lifetime);
                     Motions[idx] = MAX_MOTION;
+                    Colors[idx] = color;
                 }
             }
         }
@@ -256,5 +259,5 @@ void AddTerrain(uint id : SV_DispatchThreadID)
     uint idx = AddTerrainREAD[id];
     float2 position = PositionsREAD[idx];
     uint2 index = clamp(floor(position + 0.5 * _TerrainSize), int2(0, 0), _TerrainSize);
-    _Terrain[index] = float4(1, 1, 1, 1);
+    _Terrain[index] = Colors[idx];
 }
