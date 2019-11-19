@@ -170,7 +170,7 @@ namespace CaveRoyale {
                 computeShader.SetInt("Width", width);
                 computeShader.SetInt("Height", height);
                 computeShader.SetInt("CounterOffset", 0);
-                computeShader.SetFloat("Lifetime", 1000);
+                computeShader.SetFloat("Lifetime", 30);
                 computeShader.SetTexture(destroyTerrainKernel, "_Terrain", terrainSystem.terrain);
                 computeShader.SetBuffer(destroyTerrainKernel, "Explosions", explosionsBuffer);
                 computeShader.SetBuffer(destroyTerrainKernel, "Counter", counter);
