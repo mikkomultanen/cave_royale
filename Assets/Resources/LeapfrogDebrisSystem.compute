@@ -125,7 +125,7 @@ void UpdatePositionAndVelocity(uint id : SV_DispatchThreadID)
     Motions[id] = lerp(Motions[id], min(MAX_MOTION, dot(oldVelocity, oldVelocity)), MOTION_COEFFICIENT);
     float2 velocity = Damping * (oldVelocity + Gravity * DT);
     float speed = length(velocity);
-    float maxSpeed = 0.7 / DT;
+    float maxSpeed = 3.9 / DT;
     if (speed > maxSpeed) {
         velocity *= maxSpeed / speed;
     }
