@@ -5,6 +5,8 @@
 #define MOTION_COEFFICIENT 0.05
 #define MOTION_THRESHOLD 1
 
+#include "../Shaders/SimplexNoise3D.cginc"
+
 //the constants used for calculate cellID of particles AKA hash values
 float HashScale;
 float2 HashSize;
@@ -41,6 +43,7 @@ uint Width;
 uint Height;
 uint Count;
 uint CounterOffset;
+float ExplosionMaxArea;
 uint UploadCounterOffset;
 float Lifetime;
 float DT;
@@ -88,6 +91,8 @@ void DestroyTerrain (uint3 id : SV_DispatchThreadID)
         return;
 
     const float2 pos = id.xy - 0.5 * _TerrainSize + 0.5;
+    const uint poolSize = Counter[CounterOffset];
+    float threshold = min(1, poolSize / ExplosionMaxArea) - 1;
 
     for (uint i = 0; i < Count; i++) {
         float4 e = Explosions[i];
@@ -97,15 +102,17 @@ void DestroyTerrain (uint3 id : SV_DispatchThreadID)
             float4 color = _Terrain[id.xy];
             if (color.a > 0) {
                 _Terrain[id.xy] = float4(0, 0, 0, 0);
-                uint prevValue;
-                CounterIndex.InterlockedAdd(0, 1, prevValue);
-                if (Counter[CounterOffset] > prevValue) {
-                    uint idx = Pool.Consume();
-                    PositionsWRITE[idx] = pos;
-                    VelocitiesWRITE[idx] = float2(0, 0);
-                    Lifetimes[idx] = float2(0, Lifetime);
-                    Motions[idx] = MAX_MOTION;
-                    Colors[idx] = color;
+                if (snoise(float3(id.xy, 0)) < threshold) {
+                    uint prevValue;
+                    CounterIndex.InterlockedAdd(0, 1, prevValue);
+                    if (poolSize > prevValue) {
+                        uint idx = Pool.Consume();
+                        PositionsWRITE[idx] = pos;
+                        VelocitiesWRITE[idx] = float2(0, 0);
+                        Lifetimes[idx] = float2(0, Lifetime);
+                        Motions[idx] = MAX_MOTION;
+                        Colors[idx] = color;
+                    }
                 }
             }
         }
