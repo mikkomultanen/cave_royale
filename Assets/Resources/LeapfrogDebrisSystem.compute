@@ -30,7 +30,8 @@ AppendStructuredBuffer<uint> Dead;
 ConsumeStructuredBuffer<uint> Pool;
 AppendStructuredBuffer<uint> Alive;
 AppendStructuredBuffer<uint> AddTerrainAPPEND;
-RWStructuredBuffer<uint> Counter;
+StructuredBuffer<uint> Counter;
+RWByteAddressBuffer CounterIndex;
 StructuredBuffer<uint> UploadCounter;
 StructuredBuffer<float4> Uploads;
 StructuredBuffer<float4> Explosions;
@@ -96,10 +97,9 @@ void DestroyTerrain (uint3 id : SV_DispatchThreadID)
             float4 color = _Terrain[id.xy];
             if (color.a > 0) {
                 _Terrain[id.xy] = float4(0, 0, 0, 0);
-                // TODO check counter atomically
-                //uint prevPoolCount;
-                //InterlockedAdd(Counter[CounterOffset], -1, prevPoolCount);
-                if (Counter[CounterOffset] > 1024) {
+                uint prevValue;
+                CounterIndex.InterlockedAdd(0, 1, prevValue);
+                if (Counter[CounterOffset] > prevValue) {
                     uint idx = Pool.Consume();
                     PositionsWRITE[idx] = pos;
                     VelocitiesWRITE[idx] = float2(0, 0);

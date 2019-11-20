@@ -38,6 +38,7 @@ namespace CaveRoyale {
 
         // Size of the pool buffer
         private ComputeBuffer counter;
+        private ComputeBuffer counterIndex;
 
         // Size of the emit buffer
         private ComputeBuffer emitCounter;
@@ -77,10 +78,11 @@ namespace CaveRoyale {
             addTerrainBuffer = new ComputeBuffer(maxNumParticles, Marshal.SizeOf(typeof(Vector2)), ComputeBufferType.Append);
             addTerrainBuffer.SetCounterValue(0);
 
-            counter = new ComputeBuffer(4, Marshal.SizeOf(typeof(uint)), ComputeBufferType.IndirectArguments);
+            counter = new ComputeBuffer(4, Marshal.SizeOf(typeof(uint)), ComputeBufferType.Default);
             counter.SetData(new int[] { 0, 1, 0, 0 });
-            emitCounter = new ComputeBuffer(4, Marshal.SizeOf(typeof(uint)), ComputeBufferType.IndirectArguments);
-            emitCounter.SetData(new int[] { 0, 1, 0, 0 });
+            counterIndex = new ComputeBuffer(1, Marshal.SizeOf(typeof(uint)), ComputeBufferType.Raw);
+            emitCounter = new ComputeBuffer(4, Marshal.SizeOf(typeof(uint)), ComputeBufferType.Default);
+            emitCounter.SetData(new uint[] { 0, 1, 0, 0 });
             argsBuffer = new ComputeBuffer(5, Marshal.SizeOf(typeof(uint)), ComputeBufferType.IndirectArguments);
 
             GameObject o = GameObject.CreatePrimitive(PrimitiveType.Quad);
@@ -166,6 +168,7 @@ namespace CaveRoyale {
                 int height = terrainSystem.terrain.height;
                 explosionsBuffer.SetData(explosionsList);
                 ComputeBuffer.CopyCount(deadBuffer, counter, 0);
+                counterIndex.SetData(new uint[] {0});
                 computeShader.SetInt("Count", explosionsList.Count);
                 computeShader.SetInt("Width", width);
                 computeShader.SetInt("Height", height);
@@ -174,6 +177,7 @@ namespace CaveRoyale {
                 computeShader.SetTexture(destroyTerrainKernel, "_Terrain", terrainSystem.terrain);
                 computeShader.SetBuffer(destroyTerrainKernel, "Explosions", explosionsBuffer);
                 computeShader.SetBuffer(destroyTerrainKernel, "Counter", counter);
+                computeShader.SetBuffer(destroyTerrainKernel, "CounterIndex", counterIndex);
                 computeShader.SetBuffer(destroyTerrainKernel, "Pool", deadBuffer);
                 computeShader.SetBuffer(destroyTerrainKernel, "PositionsWRITE", positionsBuffers[READ]);
                 computeShader.SetBuffer(destroyTerrainKernel, "VelocitiesWRITE", velocitiesBuffers[READ]);
@@ -283,6 +287,7 @@ namespace CaveRoyale {
             ComputeUtilities.Release(ref deadBuffer);
             ComputeUtilities.Release(ref aliveBuffer);
             ComputeUtilities.Release(ref counter);
+            ComputeUtilities.Release(ref counterIndex);
             ComputeUtilities.Release(ref emitCounter);
             ComputeUtilities.Release(ref argsBuffer);
             mesh = null;
