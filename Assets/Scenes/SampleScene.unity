@@ -138,7 +138,7 @@ Mesh:
     vertexCount: 4
     localAABB:
       m_Center: {x: 0, y: 0, z: 0}
-      m_Extent: {x: 960, y: 540, z: 0}
+      m_Extent: {x: 320, y: 180, z: 0}
   m_Shapes:
     vertices: []
     shapes: []
@@ -217,7 +217,7 @@ Mesh:
       format: 0
       dimension: 0
     m_DataSize: 128
-    _typelessdata: 000070c4000007c4000000000000000000000000000080bf000000000000000000007044000007c4000000000000000000000000000080bf0000803f00000000000070c400000744000000000000000000000000000080bf000000000000803f0000704400000744000000000000000000000000000080bf0000803f0000803f
+    _typelessdata: 0000a0c3000034c3000000000000000000000000000080bf00000000000000000000a043000034c3000000000000000000000000000080bf0000803f000000000000a0c300003443000000000000000000000000000080bf000000000000803f0000a04300003443000000000000000000000000000080bf0000803f0000803f
   m_CompressedMesh:
     m_Vertices:
       m_NumItems: 0
@@ -272,7 +272,7 @@ Mesh:
     m_UVInfo: 0
   m_LocalAABB:
     m_Center: {x: 0, y: 0, z: 0}
-    m_Extent: {x: 960, y: 540, z: 0}
+    m_Extent: {x: 320, y: 180, z: 0}
   m_MeshUsageFlags: 0
   m_BakedConvexCollisionMesh: 
   m_BakedTriangleCollisionMesh: 
@@ -337,7 +337,7 @@ Camera:
   far clip plane: 500
   field of view: 60
   orthographic: 1
-  orthographic size: 540
+  orthographic size: 180
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -380,6 +380,28 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   terrainSystem: {fileID: 1569559394}
+  radius: 16
+--- !u!21 &1228894292
+Material:
+  serializedVersion: 6
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: CaveRoyale/TerrainDebug
+  m_Shader: {fileID: 4800000, guid: 5883c1faad8984b7e8fe105a37f4dfca, type: 3}
+  m_ShaderKeywords: 
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs: []
+    m_Floats: []
+    m_Colors: []
 --- !u!1 &1569559392
 GameObject:
   m_ObjectHideFlags: 0
@@ -425,8 +447,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 133adeb6423ee435aba8172df7dfe510, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  width: 1920
-  height: 1080
+  width: 640
+  height: 360
   terrainMaterial: {fileID: 2100000, guid: 47406be52feaf497597a67e170631757, type: 2}
   debrisMaterial: {fileID: 2100000, guid: c0f5a260df25d484c92d0f273711480a, type: 2}
 --- !u!23 &1569559395
@@ -446,7 +468,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 1656227406}
+  - {fileID: 1228894292}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -475,24 +497,3 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1569559392}
   m_Mesh: {fileID: 947789466}
---- !u!21 &1656227406
-Material:
-  serializedVersion: 6
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: CaveRoyale/TerrainDebug
-  m_Shader: {fileID: 4800000, guid: 5883c1faad8984b7e8fe105a37f4dfca, type: 3}
-  m_ShaderKeywords: 
-  m_LightmapFlags: 4
-  m_EnableInstancingVariants: 0
-  m_DoubleSidedGI: 0
-  m_CustomRenderQueue: -1
-  stringTagMap: {}
-  disabledShaderPasses: []
-  m_SavedProperties:
-    serializedVersion: 3
-    m_TexEnvs: []
-    m_Floats: []
-    m_Colors: []

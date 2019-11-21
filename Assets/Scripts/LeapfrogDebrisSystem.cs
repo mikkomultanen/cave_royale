@@ -125,7 +125,7 @@ namespace CaveRoyale {
                 lifetimeTimestep += timestep;
                 DispatchUpdatePositionAndVelocity();
                 hash.Process(positionsBuffers[READ], lifetimesBuffer);
-                for (int i = 0; i < 2; i++) {
+                for (int i = 0; i < 4; i++) {
                     DispatchSolveCollisions();
                 }
             }
