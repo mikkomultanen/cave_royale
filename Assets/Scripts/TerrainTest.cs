@@ -3,6 +3,7 @@
 [RequireComponent(typeof(Camera))]
 public class TerrainTest : MonoBehaviour {
 	public TerrainSystem terrainSystem;
+	public float radius = 16;
 	private Camera _camera;
 	void Start () {
 		_camera = GetComponent<Camera>();
@@ -13,7 +14,7 @@ public class TerrainTest : MonoBehaviour {
 			Vector3 viewPos = _camera.ScreenToViewportPoint(mousePos);
 			if (viewPos.x > 0 && viewPos.x < 1 && viewPos.y > 0 && viewPos.y < 1) {
 				Vector3 wordPos = _camera.ScreenToWorldPoint(mousePos);
-				terrainSystem.EmitExplosion(wordPos, 8);
+				terrainSystem.EmitExplosion(wordPos, radius);
 				//terrainSystem.EmitDebris(wordPos, Vector2.zero);
 			}
 		}

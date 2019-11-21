@@ -40,12 +40,12 @@ namespace CaveRoyale {
             this.bounds = bounds;
             this.terrainSystem = terrainSystem;
 
-            positionsBuffer = new ComputeBuffer(maxNumParticles, Marshal.SizeOf(typeof(Vector4)));
-            velocitiesBuffer = new ComputeBuffer(maxNumParticles, Marshal.SizeOf(typeof(Vector4)));
-            lifetimesBuffer = new ComputeBuffer(maxNumParticles, Marshal.SizeOf(typeof(Vector4)));
+            positionsBuffer = new ComputeBuffer(maxNumParticles, Marshal.SizeOf(typeof(Vector2)));
+            velocitiesBuffer = new ComputeBuffer(maxNumParticles, Marshal.SizeOf(typeof(Vector2)));
+            lifetimesBuffer = new ComputeBuffer(maxNumParticles, Marshal.SizeOf(typeof(Vector2)));
             predictedBuffers = new ComputeBuffer[2];
-            predictedBuffers[0] = new ComputeBuffer(maxNumParticles, Marshal.SizeOf(typeof(Vector4)));
-            predictedBuffers[1] = new ComputeBuffer(maxNumParticles, Marshal.SizeOf(typeof(Vector4)));
+            predictedBuffers[0] = new ComputeBuffer(maxNumParticles, Marshal.SizeOf(typeof(Vector2)));
+            predictedBuffers[1] = new ComputeBuffer(maxNumParticles, Marshal.SizeOf(typeof(Vector2)));
             deadBuffer = new ComputeBuffer(maxNumParticles, Marshal.SizeOf(typeof(uint)), ComputeBufferType.Append);
             deadBuffer.SetCounterValue(0);
             aliveBuffer = new ComputeBuffer(maxNumParticles, Marshal.SizeOf(typeof(uint)), ComputeBufferType.Append);
@@ -120,6 +120,11 @@ namespace CaveRoyale {
             computeShader.Dispatch(emitKernel, Groups(uploads.count), 1, 1);
         }
 
+        public void DispatchDestroyTerrain()
+        {
+
+        }
+
         private void DispatchEmit()
         {
             if (emitList.Count > 0) {
@@ -188,6 +193,11 @@ namespace CaveRoyale {
             Graphics.DrawMeshInstancedIndirect(mesh, 0, material, bounds, argsBuffer, 0);
         }
 
+        public void EmitExplosion(Vector2 position, float radius)
+        {
+            
+        }
+
         public void Emit(Vector2 position, Vector2 velocity) {
             if (emitList.Count < emitBuffer.count) {
                 Vector4 e = position;
@@ -213,6 +223,8 @@ namespace CaveRoyale {
             ComputeUtilities.Release(ref deadBuffer);
             ComputeUtilities.Release(ref aliveBuffer);
             ComputeUtilities.Release(ref counter);
+            ComputeUtilities.Release(ref emitCounter);
+            ComputeUtilities.Release(ref argsBuffer);
             mesh = null;
             hash.Dispose();
         }

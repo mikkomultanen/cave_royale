@@ -1,0 +1,289 @@
+#define THREADS 128
+#define D 1.1283791671
+#define R 0.3716208329
+#define MAX_MOTION 10
+#define MOTION_COEFFICIENT 0.05
+#define MOTION_THRESHOLD 1
+
+#include "../Shaders/SimplexNoise3D.cginc"
+
+//the constants used for calculate cellID of particles AKA hash values
+float HashScale;
+float2 HashSize;
+float2 HashTranslate;
+//the indexmap and start/end index buffer
+StructuredBuffer<int2> IndexMap;
+StructuredBuffer<int2> Table;
+
+int2 HashIndex(float2 p)
+{
+	p = (p - HashTranslate) * HashScale;
+	return clamp(p, 0, HashSize - 1);
+}
+
+StructuredBuffer<float2> PositionsREAD;
+RWStructuredBuffer<float2> PositionsWRITE;
+StructuredBuffer<float2> VelocitiesREAD;
+RWStructuredBuffer<float2> VelocitiesWRITE;
+RWStructuredBuffer<float2> Lifetimes;
+RWStructuredBuffer<float> Motions;
+RWStructuredBuffer<float4> Colors;
+AppendStructuredBuffer<uint> Dead;
+ConsumeStructuredBuffer<uint> Pool;
+AppendStructuredBuffer<uint> Alive;
+AppendStructuredBuffer<uint> AddTerrainAPPEND;
+StructuredBuffer<uint> Counter;
+RWByteAddressBuffer CounterIndex;
+StructuredBuffer<uint> UploadCounter;
+StructuredBuffer<float4> Uploads;
+StructuredBuffer<float4> Explosions;
+StructuredBuffer<uint> AddTerrainREAD;
+
+uint Width;
+uint Height;
+uint Count;
+uint CounterOffset;
+float ExplosionMaxArea;
+uint UploadCounterOffset;
+float Lifetime;
+float DT;
+float LifetimeDT;
+float2 Gravity;
+float Damping;
+float4 Bounds;
+
+Texture2D<float3> _TerrainDistanceField;
+SamplerState sampler_TerrainDistanceField;
+float4 _TerrainDistanceFieldScale; // x = 1 / width, y = 1 / height, z = width, w = height
+float _TerrainDistanceFieldMultiplier;
+
+RWTexture2D<float4> _Terrain;
+float2 _TerrainSize;
+
+#pragma kernel Init
+[numthreads(THREADS,1,1)]
+void Init(uint id : SV_DispatchThreadID)
+{
+    if (id >= Width) return;
+
+    Lifetimes[id] = float2(1, 0);
+	Dead.Append(id);
+}
+
+#pragma kernel EmitIndirect
+[numthreads(THREADS,1,1)]
+void EmitIndirect (uint id : SV_DispatchThreadID)
+{
+	if (id < UploadCounter[UploadCounterOffset] && id < Counter[CounterOffset]) {
+		float4 upload = Uploads[id];
+		uint idx = Pool.Consume();
+        PositionsWRITE[idx] = upload.xy;
+        VelocitiesWRITE[idx] = upload.zw;
+        Lifetimes[idx] = float2(0, Lifetime);
+        Motions[idx] = MAX_MOTION;
+	}
+}
+
+#pragma kernel DestroyTerrain
+[numthreads(8,8,1)]
+void DestroyTerrain (uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= Width || id.y >= Height)
+        return;
+
+    const float2 pos = id.xy - 0.5 * _TerrainSize + 0.5;
+    const uint poolSize = Counter[CounterOffset];
+    float threshold = min(1, poolSize / ExplosionMaxArea) - 1;
+
+    for (uint i = 0; i < Count; i++) {
+        float4 e = Explosions[i];
+        float2 v = pos - e.xy;
+        float r2 = dot(v, v);
+        if (r2 < e.z) {
+            float4 color = _Terrain[id.xy];
+            if (color.a > 0) {
+                _Terrain[id.xy] = float4(0, 0, 0, 0);
+                if (snoise(float3(id.xy, 0)) < threshold) {
+                    uint prevValue;
+                    CounterIndex.InterlockedAdd(0, 1, prevValue);
+                    if (poolSize > prevValue) {
+                        uint idx = Pool.Consume();
+                        PositionsWRITE[idx] = pos;
+                        VelocitiesWRITE[idx] = float2(0, 0);
+                        Lifetimes[idx] = float2(0, Lifetime);
+                        Motions[idx] = MAX_MOTION;
+                        Colors[idx] = color;
+                    }
+                }
+            }
+        }
+    }
+}
+
+#pragma kernel UpdatePositionAndVelocity
+[numthreads(THREADS,1,1)]
+void UpdatePositionAndVelocity(uint id : SV_DispatchThreadID)
+{
+    if (id >= Width) return;
+
+    float2 lifetime = Lifetimes[id];
+    if (lifetime.x > lifetime.y) return;
+
+    float2 oldVelocity = VelocitiesREAD[id];
+    Motions[id] = lerp(Motions[id], min(MAX_MOTION, dot(oldVelocity, oldVelocity)), MOTION_COEFFICIENT);
+    float2 velocity = Damping * (oldVelocity + Gravity * DT);
+    float speed = length(velocity);
+    float maxSpeed = 3.9 / DT;
+    if (speed > maxSpeed) {
+        velocity *= maxSpeed / speed;
+    }
+    VelocitiesWRITE[id] = velocity;
+    PositionsWRITE[id] = PositionsREAD[id] + velocity * DT; 
+}
+
+#define LOOP_START \
+[unroll] \
+for (int j = -1; j <= 1; j++) \
+{ \
+[unroll] \
+for (int i = -1; i <= 1; i++) \
+{ \
+
+#define LOOP_END \
+} } \
+
+float2 normalized(float2 v)
+{
+    return v / max(length(v), 0.0001);
+}
+
+#pragma kernel SolveCollisions
+[numthreads(THREADS,1,1)]
+void SolveCollisions(uint id : SV_DispatchThreadID)
+{
+    if (id >= Width) return;
+
+    const float2 lifetime = Lifetimes[id];
+    if (lifetime.x > lifetime.y) return;
+
+    float2 predicted = PositionsREAD[id];
+    float2 velocity = VelocitiesREAD[id];
+
+    float2 correction = float2(0, 0);
+    float2 velocityCorrection = float2(0, 0);
+    int2 hashIndex = HashIndex(predicted);
+	int2 size = HashSize;
+
+    LOOP_START
+
+    int xi = hashIndex.x + i;
+    int yj = hashIndex.y + j;
+
+	if (xi < 0 || xi >= size.x) continue;
+	if (yj < 0 || yj >= size.y) continue;
+
+    int hash = xi + yj * size.x;
+    int2 bounds = Table[hash];
+
+    for (int idx = bounds.x; idx <= bounds.y; idx++)
+	{
+		uint n = IndexMap[idx].y;
+		if (n == id) continue;
+
+        float2 r = predicted - PositionsREAD[n];
+        float d = length(r);
+        if (d < D) {
+            const float2 normal = d < 0.001 ? float2(id < n ? 1 : -1, 0) : (r / d);
+            correction += 0.5 * (D - d) * normal;
+
+            float2 rv = velocity - VelocitiesREAD[n];
+            float velocityAlongNormal = dot(rv, normal);
+            if (velocityAlongNormal < 0) {
+                float2 velocity_n = velocityAlongNormal * normal;
+                float2 velocity_t = velocity - velocity_n;
+                float t_length = max(0.001, length(velocity_t));
+                float b = 1 - max((t_length + 0.2 * velocityAlongNormal) / t_length, 0);
+                velocityCorrection -= 0.5 * (velocity_n + b * velocity_t);
+            }
+        }
+    }
+
+    LOOP_END
+
+    predicted += correction;
+    velocity += velocityCorrection;
+
+    float2 uv = predicted * _TerrainDistanceFieldScale.xy + 0.5;
+    float3 td = 2 * _TerrainDistanceField.SampleLevel(sampler_TerrainDistanceField, uv, 0) - 1;
+    float distance = td.x * _TerrainDistanceFieldMultiplier;
+    if (distance < R) {
+        const float2 normal = normalized(td.yz);
+        predicted += (R - distance) * normal;
+
+        float velocityAlongNormal = dot(velocity, normal);
+        if (velocityAlongNormal < 0) {
+            float2 velocity_n = velocityAlongNormal * normal;
+            float2 velocity_t = velocity - velocity_n;
+            float t_length = length(velocity_t);
+            float b = 1 - max((t_length - 0.2 * length(velocity_n)) / max(0.001, t_length), 0);
+            velocity -= (2 - b) * velocity_n + b * velocity_t;
+        }
+    }
+    float2 position = predicted;
+    if (predicted.x < Bounds.x + R) {
+        predicted.x = Bounds.x + R;
+    } else if (predicted.x > Bounds.z - R) {
+        predicted.x = Bounds.z - R;
+    } 
+    if (predicted.y < Bounds.y + R) {
+        predicted.y = Bounds.y + R;
+    } else if (predicted.y > Bounds.w - R) {
+        predicted.y = Bounds.w - R;
+    }
+    //clamp(predicted, Bounds.xy + R, Bounds.zw - R);
+    if (abs(position.x - predicted.x) > 0.001) {
+        velocity.x = 0;
+    }
+    if (abs(position.y - predicted.y) > 0.001) {
+        velocity.y = 0;
+    }
+    PositionsWRITE[id] = predicted;
+    VelocitiesWRITE[id] = velocity;
+}
+
+#pragma kernel Update
+[numthreads(THREADS,1,1)]
+void Update(uint id : SV_DispatchThreadID)
+{
+    if (id >= Width) return;
+
+    float2 lifetime = Lifetimes[id];
+    if (lifetime.x > lifetime.y) return;
+
+    float motion = Motions[id];
+    if (motion < MOTION_THRESHOLD) {
+        lifetime.x = lifetime.y;
+        AddTerrainAPPEND.Append(id);
+    }
+
+    lifetime.x += LifetimeDT;
+    Lifetimes[id] = lifetime;
+    if (lifetime.x > lifetime.y) {
+        Dead.Append(id);
+    } else {
+        Alive.Append(id);
+    }
+}
+
+#pragma kernel AddTerrain
+[numthreads(THREADS,1,1)]
+void AddTerrain(uint id : SV_DispatchThreadID)
+{
+    if (id >= Counter[CounterOffset])
+        return;
+
+    uint idx = AddTerrainREAD[id];
+    float2 position = PositionsREAD[idx];
+    uint2 index = clamp(floor(position + 0.5 * _TerrainSize), int2(0, 0), _TerrainSize);
+    _Terrain[index] = Colors[idx];
+}
