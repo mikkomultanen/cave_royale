@@ -50,6 +50,7 @@ float DT;
 float LifetimeDT;
 float2 Gravity;
 float Damping;
+float4 Bounds;
 
 Texture2D<float3> _TerrainDistanceField;
 SamplerState sampler_TerrainDistanceField;
@@ -227,6 +228,24 @@ void SolveCollisions(uint id : SV_DispatchThreadID)
             float b = 1 - max((t_length - 0.2 * length(velocity_n)) / max(0.001, t_length), 0);
             velocity -= (2 - b) * velocity_n + b * velocity_t;
         }
+    }
+    float2 position = predicted;
+    if (predicted.x < Bounds.x + R) {
+        predicted.x = Bounds.x + R;
+    } else if (predicted.x > Bounds.z - R) {
+        predicted.x = Bounds.z - R;
+    } 
+    if (predicted.y < Bounds.y + R) {
+        predicted.y = Bounds.y + R;
+    } else if (predicted.y > Bounds.w - R) {
+        predicted.y = Bounds.w - R;
+    }
+    //clamp(predicted, Bounds.xy + R, Bounds.zw - R);
+    if (abs(position.x - predicted.x) > 0.001) {
+        velocity.x = 0;
+    }
+    if (abs(position.y - predicted.y) > 0.001) {
+        velocity.y = 0;
     }
     PositionsWRITE[id] = predicted;
     VelocitiesWRITE[id] = velocity;

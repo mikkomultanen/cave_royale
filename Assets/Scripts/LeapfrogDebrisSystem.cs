@@ -99,6 +99,11 @@ namespace CaveRoyale {
             computeShader.SetFloat("_TerrainDistanceFieldMultiplier", terrainSystem.terrainDistanceFieldMultiplier);
             computeShader.SetVector("_TerrainSize", new Vector2(terrainSystem.width, terrainSystem.height));
 
+            Vector2 boundsMin = bounds.min;
+            Vector2 boundsMax = bounds.max;
+            Vector4 boundsVector = new Vector4(boundsMin.x, boundsMin.y, boundsMax.x, boundsMax.y);
+            computeShader.SetVector("Bounds", boundsVector);
+
             int initKernel = computeShader.FindKernel("Init");
             computeShader.SetInt("Width", maxNumParticles);
             computeShader.SetBuffer(initKernel, "Lifetimes", lifetimesBuffer);
@@ -209,6 +214,7 @@ namespace CaveRoyale {
         private void DispatchSolveCollisions()
         {
             int solveConstraintsKernel = computeShader.FindKernel("SolveCollisions");
+            computeShader.SetInt("Width", lifetimesBuffer.count);
             computeShader.SetBuffer(solveConstraintsKernel, "IndexMap", hash.IndexMap);
             computeShader.SetBuffer(solveConstraintsKernel, "Table", hash.Table);
             computeShader.SetTexture(solveConstraintsKernel, "_TerrainDistanceField", terrainSystem.terrainDistanceField);
