@@ -78,10 +78,10 @@ namespace CaveRoyale {
             addTerrainBuffer = new ComputeBuffer(maxNumParticles, Marshal.SizeOf(typeof(Vector2)), ComputeBufferType.Append);
             addTerrainBuffer.SetCounterValue(0);
 
-            counter = new ComputeBuffer(4, Marshal.SizeOf(typeof(uint)), ComputeBufferType.Default);
+            counter = new ComputeBuffer(4, Marshal.SizeOf(typeof(uint)), ComputeBufferType.IndirectArguments);
             counter.SetData(new int[] { 0, 1, 0, 0 });
             counterIndex = new ComputeBuffer(1, Marshal.SizeOf(typeof(uint)), ComputeBufferType.Raw);
-            emitCounter = new ComputeBuffer(4, Marshal.SizeOf(typeof(uint)), ComputeBufferType.Default);
+            emitCounter = new ComputeBuffer(4, Marshal.SizeOf(typeof(uint)), ComputeBufferType.IndirectArguments);
             emitCounter.SetData(new uint[] { 0, 1, 0, 0 });
             argsBuffer = new ComputeBuffer(5, Marshal.SizeOf(typeof(uint)), ComputeBufferType.IndirectArguments);
 
