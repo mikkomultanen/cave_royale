@@ -96,6 +96,7 @@ LightmapSettings:
     m_PVRFilteringAtrousPositionSigmaAO: 1
     m_ExportTrainingData: 0
     m_TrainingDataDestination: TrainingData
+    m_LightProbeSampleCountMultiplier: 4
   m_LightingDataAsset: {fileID: 0}
   m_UseShadowmask: 1
 --- !u!196 &4
@@ -138,7 +139,7 @@ Mesh:
     vertexCount: 4
     localAABB:
       m_Center: {x: 0, y: 0, z: 0}
-      m_Extent: {x: 320, y: 180, z: 0}
+      m_Extent: {x: 80, y: 45, z: 0}
   m_Shapes:
     vertices: []
     shapes: []
@@ -217,7 +218,7 @@ Mesh:
       format: 0
       dimension: 0
     m_DataSize: 128
-    _typelessdata: 0000a0c3000034c3000000000000000000000000000080bf00000000000000000000a043000034c3000000000000000000000000000080bf0000803f000000000000a0c300003443000000000000000000000000000080bf000000000000803f0000a04300003443000000000000000000000000000080bf0000803f0000803f
+    _typelessdata: 0000a0c2000034c2000000000000000000000000000080bf00000000000000000000a042000034c2000000000000000000000000000080bf0000803f000000000000a0c200003442000000000000000000000000000080bf000000000000803f0000a04200003442000000000000000000000000000080bf0000803f0000803f
   m_CompressedMesh:
     m_Vertices:
       m_NumItems: 0
@@ -272,7 +273,7 @@ Mesh:
     m_UVInfo: 0
   m_LocalAABB:
     m_Center: {x: 0, y: 0, z: 0}
-    m_Extent: {x: 320, y: 180, z: 0}
+    m_Extent: {x: 80, y: 45, z: 0}
   m_MeshUsageFlags: 0
   m_BakedConvexCollisionMesh: 
   m_BakedTriangleCollisionMesh: 
@@ -337,7 +338,7 @@ Camera:
   far clip plane: 500
   field of view: 60
   orthographic: 1
-  orthographic size: 180
+  orthographic size: 45
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -381,7 +382,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   terrainSystem: {fileID: 1569559394}
   radius: 16
---- !u!21 &1228894292
+--- !u!21 &1162178926
 Material:
   serializedVersion: 6
   m_ObjectHideFlags: 0
@@ -447,8 +448,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 133adeb6423ee435aba8172df7dfe510, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  width: 640
-  height: 360
+  width: 160
+  height: 90
   terrainMaterial: {fileID: 2100000, guid: 47406be52feaf497597a67e170631757, type: 2}
   debrisMaterial: {fileID: 2100000, guid: c0f5a260df25d484c92d0f273711480a, type: 2}
 --- !u!23 &1569559395
@@ -465,10 +466,11 @@ MeshRenderer:
   m_MotionVectors: 1
   m_LightProbeUsage: 1
   m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 1228894292}
+  - {fileID: 1162178926}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0

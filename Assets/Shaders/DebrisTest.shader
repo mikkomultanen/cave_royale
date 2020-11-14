@@ -41,7 +41,7 @@ Shader "Unlit/DebrisTest"
 			};
 			
 			StructuredBuffer<float2> _Positions;
-			StructuredBuffer<float> _Motions;
+			StructuredBuffer<float2> _Motions;
 			StructuredBuffer<float4> _Colors;
 			StructuredBuffer<uint> _Alive;
 			float _Scale;
@@ -56,7 +56,8 @@ Shader "Unlit/DebrisTest"
 				v2f o;
 				o.pos = UnityObjectToClipPos(v.vertex);
                 o.uv = TRANSFORM_TEX(v.uv,_MainTex);
-				o.color = _Colors[idx];//float4(0.1 * _Motions[idx], 0, 0, 1);
+				//o.color = _Colors[idx];
+				o.color = float4(0.1 * length(_Motions[idx]), 0, 0, 1);
 				return o;
 			}
 			

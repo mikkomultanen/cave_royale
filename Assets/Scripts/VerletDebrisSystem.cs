@@ -190,6 +190,7 @@ namespace CaveRoyale {
             ComputeBuffer.CopyCount(aliveBuffer, argsBuffer, Marshal.SizeOf(typeof(uint)));
 		    material.SetBuffer("_Positions", positionsBuffer);
 		    material.SetBuffer("_Alive", aliveBuffer);
+            material.SetBuffer("_Motions", velocitiesBuffer);
             Graphics.DrawMeshInstancedIndirect(mesh, 0, material, bounds, argsBuffer, 0);
         }
 
